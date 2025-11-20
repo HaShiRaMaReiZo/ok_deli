@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: deli-backend
+    env: docker
+    region: oregon
+    plan: free
+    # Build and start commands are handled by Dockerfile and docker-entrypoint.sh
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: error
+      - key: DB_CONNECTION
+        value: mysql
+      # Add other environment variables in Render dashboard:
+      # APP_KEY, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, etc.
+
+databases:
+  - name: deli-mysql-database
+    databaseName: deli_db
+    user: deli_user
+    plan: free
+    region: oregon
+    databaseType: mysql

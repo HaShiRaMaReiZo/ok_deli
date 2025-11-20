@@ -1,5 +1,4 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dio/dio.dart';
 import '../core/api_client.dart';
 import '../core/api_endpoints.dart';
 import '../services/auth_service.dart';
@@ -16,7 +15,10 @@ class AuthRepository {
   static Future<AuthRepository> create() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_tokenKey);
-    final client = ApiClient.create(baseUrl: ApiEndpoints.baseUrl, token: token);
+    final client = ApiClient.create(
+      baseUrl: ApiEndpoints.baseUrl,
+      token: token,
+    );
     final service = AuthService(client);
     return AuthRepository._(prefs, client, service);
   }
@@ -25,7 +27,12 @@ class AuthRepository {
 
   ApiClient get client => _client;
 
-  Future<String> login({required String email, required String password}) async {
+  AuthService get service => _service;
+
+  Future<String> login({
+    required String email,
+    required String password,
+  }) async {
     final data = await _service.login(email: email, password: password);
     final token = data['token'] as String;
     await _prefs.setString(_tokenKey, token);

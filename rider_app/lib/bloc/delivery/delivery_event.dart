@@ -2,6 +2,10 @@ part of 'delivery_bloc.dart';
 
 @freezed
 class DeliveryEvent with _$DeliveryEvent {
+  const factory DeliveryEvent.receiveFromOffice({
+    required int packageId,
+    String? notes,
+  }) = _ReceiveFromOffice;
   const factory DeliveryEvent.startDelivery({required int packageId}) =
       _StartDelivery;
   const factory DeliveryEvent.updateStatus({

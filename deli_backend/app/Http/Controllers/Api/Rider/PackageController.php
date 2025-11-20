@@ -10,7 +10,6 @@ use App\Models\DeliveryProof;
 use App\Models\CodCollection;
 use App\Events\PackageStatusChanged;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class PackageController extends Controller
 {
@@ -18,7 +17,18 @@ class PackageController extends Controller
     {
         $rider = $request->user()->rider;
         
+        // Only return packages that are actively assigned to the rider
+        // Exclude completed/delivered/returned packages
+        // Note: contact_failed packages are automatically reassigned (status becomes arrived_at_office)
+        // Only cancelled packages need to be returned to office
         $packages = Package::where('current_rider_id', $rider->id)
+            ->whereIn('status', [
+                'assigned_to_rider',  // For pickup from merchant OR assigned for delivery (need to receive from office)
+                'picked_up',          // Picked up from merchant (legacy, for backward compatibility)
+                'ready_for_delivery', // Received from office, ready to start delivery
+                'on_the_way',        // Currently being delivered
+                'cancelled'          // Cancelled, rider needs to return to office
+            ])
             ->with(['merchant', 'statusHistory'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -40,7 +50,7 @@ class PackageController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:picked_up,on_the_way,delivered,contact_failed,return_to_office',
+            'status' => 'required|in:picked_up,ready_for_delivery,on_the_way,delivered,contact_failed,return_to_office,cancelled',
             'notes' => 'nullable|string',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
@@ -62,6 +72,12 @@ class PackageController extends Controller
             $package->picked_up_at = now();
         } elseif ($newStatus === 'delivered' && !$package->delivered_at) {
             $package->delivered_at = now();
+        }
+
+        // When returning to office, clear the rider assignment
+        // This removes the package from the rider's active assignments
+        if ($newStatus === 'return_to_office') {
+            $package->current_rider_id = null;
         }
 
         $package->delivery_notes = $request->notes;
@@ -88,18 +104,63 @@ class PackageController extends Controller
         ]);
     }
 
+    public function receiveFromOffice(Request $request, $id)
+    {
+        $request->validate([
+            'notes' => 'nullable|string',
+        ]);
+
+        $rider = $request->user()->rider;
+        
+        $package = Package::where('current_rider_id', $rider->id)
+            ->where('status', 'assigned_to_rider')
+            ->findOrFail($id);
+
+        // Check if this is a delivery assignment (previous status was arrived_at_office)
+        // Get the most recent status history entry
+        $lastStatusHistory = \App\Models\PackageStatusHistory::where('package_id', $package->id)
+            ->orderBy('created_at', 'desc')
+            ->skip(1) // Skip the current assigned_to_rider entry
+            ->first();
+        
+        $isDeliveryAssignment = $lastStatusHistory && $lastStatusHistory->status === 'arrived_at_office';
+
+        if (!$isDeliveryAssignment) {
+            return response()->json([
+                'message' => 'This package is not assigned for delivery from office',
+            ], 400);
+        }
+
+        // Update package status to ready_for_delivery
+        $package->status = 'ready_for_delivery';
+        $package->save();
+
+        // Log status history
+        PackageStatusHistory::create([
+            'package_id' => $package->id,
+            'status' => 'ready_for_delivery',
+            'changed_by_user_id' => $request->user()->id,
+            'changed_by_type' => 'rider',
+            'notes' => $request->notes ?? 'Received package from office',
+            'created_at' => now(),
+        ]);
+
+        // Broadcast status change via WebSocket
+        event(new PackageStatusChanged($package->id, 'ready_for_delivery', $package->merchant_id));
+
+        return response()->json([
+            'message' => 'Package received from office successfully',
+            'package' => $package->load(['merchant', 'statusHistory']),
+        ]);
+    }
+
     public function startDelivery(Request $request, $id)
     {
         $rider = $request->user()->rider;
         
         $package = Package::where('current_rider_id', $rider->id)
+            ->whereIn('status', ['ready_for_delivery', 'picked_up']) // Allow both ready_for_delivery and picked_up (legacy)
             ->findOrFail($id);
-
-        if ($package->status !== 'picked_up') {
-            return response()->json([
-                'message' => 'Package must be picked up first',
-            ], 400);
-        }
 
         // Update status to on_the_way
         $package->status = 'on_the_way';
@@ -141,11 +202,14 @@ class PackageController extends Controller
             ->findOrFail($id);
 
         if ($request->contact_result === 'failed') {
-            $package->status = 'contact_failed';
-            $package->delivery_notes = $request->notes;
+            // Automatically change status to arrived_at_office for next day assignment
+            // Clear rider assignment so package is removed from rider's list
+            $package->status = 'arrived_at_office';
+            $package->current_rider_id = null;
+            $package->delivery_notes = $request->notes ?? 'Customer contact failed - reassigned for next day delivery';
             $package->save();
 
-            // Log status history
+            // Log status history - first log contact_failed, then arrived_at_office
             PackageStatusHistory::create([
                 'package_id' => $package->id,
                 'status' => 'contact_failed',
@@ -154,6 +218,19 @@ class PackageController extends Controller
                 'notes' => $request->notes ?? 'Customer contact failed',
                 'created_at' => now(),
             ]);
+
+            // Log the automatic reassignment
+            PackageStatusHistory::create([
+                'package_id' => $package->id,
+                'status' => 'arrived_at_office',
+                'changed_by_user_id' => $request->user()->id,
+                'changed_by_type' => 'rider',
+                'notes' => 'Automatically reassigned for next day delivery after contact failed',
+                'created_at' => now(),
+            ]);
+
+            // Broadcast status change via WebSocket
+            event(new PackageStatusChanged($package->id, 'arrived_at_office', $package->merchant_id));
         }
 
         return response()->json([
@@ -227,6 +304,11 @@ class PackageController extends Controller
             $collectionProof = $request->file('collection_proof')->store('cod_proofs', 'public');
         }
 
+        // Get rider's current location for delivery location
+        $latitude = $rider->current_latitude;
+        $longitude = $rider->current_longitude;
+
+        // Create COD collection record
         CodCollection::create([
             'package_id' => $package->id,
             'rider_id' => $rider->id,
@@ -236,8 +318,111 @@ class PackageController extends Controller
             'status' => 'collected',
         ]);
 
+        // Update package status to delivered
+        $package->status = 'delivered';
+        if (!$package->delivered_at) {
+            $package->delivered_at = now();
+        }
+        $package->save();
+
+        // Log status history with delivery location
+        PackageStatusHistory::create([
+            'package_id' => $package->id,
+            'status' => 'delivered',
+            'changed_by_user_id' => $request->user()->id,
+            'changed_by_type' => 'rider',
+            'notes' => 'COD collected and package delivered',
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'created_at' => now(),
+        ]);
+
+        // Broadcast status change via WebSocket
+        event(new PackageStatusChanged($package->id, 'delivered', $package->merchant_id));
+
         return response()->json([
-            'message' => 'COD collected successfully',
+            'message' => 'COD collected successfully and package marked as delivered',
+            'package' => $package->load(['merchant', 'statusHistory']),
+        ]);
+    }
+
+    public function confirmPickupByMerchant(Request $request, $merchantId)
+    {
+        $request->validate([
+            'notes' => 'nullable|string',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
+
+        $rider = $request->user()->rider;
+        $merchant = \App\Models\Merchant::findOrFail($merchantId);
+
+        // Get all packages from this merchant that are assigned to this rider for pickup
+        // Status should be 'assigned_to_rider' (pickup assignment)
+        $packages = Package::where('merchant_id', $merchantId)
+            ->where('current_rider_id', $rider->id)
+            ->where('status', 'assigned_to_rider')
+            ->get();
+
+        if ($packages->isEmpty()) {
+            return response()->json([
+                'message' => 'No packages assigned for pickup from this merchant',
+                'confirmed_count' => 0,
+            ], 404);
+        }
+
+        $confirmed = [];
+
+        foreach ($packages as $package) {
+            // Update package status to picked_up
+            $package->status = 'picked_up';
+            if (!$package->picked_up_at) {
+                $package->picked_up_at = now();
+            }
+            if ($request->notes) {
+                $package->delivery_notes = $request->notes;
+            }
+            $package->save();
+
+            // Update assignment record
+            $assignment = RiderAssignment::where('package_id', $package->id)
+                ->where('rider_id', $rider->id)
+                ->where('status', 'assigned')
+                ->latest()
+                ->first();
+            
+            if ($assignment) {
+                $assignment->status = 'picked_up';
+                $assignment->save();
+            }
+
+            // Log status history
+            PackageStatusHistory::create([
+                'package_id' => $package->id,
+                'status' => 'picked_up',
+                'changed_by_user_id' => $request->user()->id,
+                'changed_by_type' => 'rider',
+                'notes' => $request->notes ?? "Pickup confirmed from merchant {$merchant->business_name}",
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'created_at' => now(),
+            ]);
+
+            // Broadcast status change via WebSocket
+            event(new PackageStatusChanged($package->id, 'picked_up', $package->merchant_id));
+
+            $confirmed[] = $package->id;
+        }
+
+        return response()->json([
+            'message' => 'Pickup confirmed successfully',
+            'merchant' => [
+                'id' => $merchant->id,
+                'business_name' => $merchant->business_name,
+                'business_address' => $merchant->business_address,
+            ],
+            'confirmed_count' => count($confirmed),
+            'confirmed_package_ids' => $confirmed,
         ]);
     }
 }

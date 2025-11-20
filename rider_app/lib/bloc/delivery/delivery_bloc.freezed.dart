@@ -20,6 +20,7 @@ mixin _$DeliveryEvent {
   int get packageId => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
+    required TResult Function(int packageId, String? notes) receiveFromOffice,
     required TResult Function(int packageId) startDelivery,
     required TResult Function(
       int packageId,
@@ -36,6 +37,7 @@ mixin _$DeliveryEvent {
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(int packageId, String? notes)? receiveFromOffice,
     TResult? Function(int packageId)? startDelivery,
     TResult? Function(
       int packageId,
@@ -52,6 +54,7 @@ mixin _$DeliveryEvent {
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int packageId, String? notes)? receiveFromOffice,
     TResult Function(int packageId)? startDelivery,
     TResult Function(
       int packageId,
@@ -69,6 +72,7 @@ mixin _$DeliveryEvent {
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(_ReceiveFromOffice value) receiveFromOffice,
     required TResult Function(_StartDelivery value) startDelivery,
     required TResult Function(_UpdateStatus value) updateStatus,
     required TResult Function(_ContactCustomer value) contactCustomer,
@@ -76,6 +80,7 @@ mixin _$DeliveryEvent {
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult? Function(_StartDelivery value)? startDelivery,
     TResult? Function(_UpdateStatus value)? updateStatus,
     TResult? Function(_ContactCustomer value)? contactCustomer,
@@ -83,6 +88,7 @@ mixin _$DeliveryEvent {
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult Function(_StartDelivery value)? startDelivery,
     TResult Function(_UpdateStatus value)? updateStatus,
     TResult Function(_ContactCustomer value)? contactCustomer,
@@ -132,6 +138,212 @@ class _$DeliveryEventCopyWithImpl<$Res, $Val extends DeliveryEvent>
           as $Val,
     );
   }
+}
+
+/// @nodoc
+abstract class _$$ReceiveFromOfficeImplCopyWith<$Res>
+    implements $DeliveryEventCopyWith<$Res> {
+  factory _$$ReceiveFromOfficeImplCopyWith(
+    _$ReceiveFromOfficeImpl value,
+    $Res Function(_$ReceiveFromOfficeImpl) then,
+  ) = __$$ReceiveFromOfficeImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({int packageId, String? notes});
+}
+
+/// @nodoc
+class __$$ReceiveFromOfficeImplCopyWithImpl<$Res>
+    extends _$DeliveryEventCopyWithImpl<$Res, _$ReceiveFromOfficeImpl>
+    implements _$$ReceiveFromOfficeImplCopyWith<$Res> {
+  __$$ReceiveFromOfficeImplCopyWithImpl(
+    _$ReceiveFromOfficeImpl _value,
+    $Res Function(_$ReceiveFromOfficeImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of DeliveryEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? packageId = null, Object? notes = freezed}) {
+    return _then(
+      _$ReceiveFromOfficeImpl(
+        packageId: null == packageId
+            ? _value.packageId
+            : packageId // ignore: cast_nullable_to_non_nullable
+                  as int,
+        notes: freezed == notes
+            ? _value.notes
+            : notes // ignore: cast_nullable_to_non_nullable
+                  as String?,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+
+class _$ReceiveFromOfficeImpl implements _ReceiveFromOffice {
+  const _$ReceiveFromOfficeImpl({required this.packageId, this.notes});
+
+  @override
+  final int packageId;
+  @override
+  final String? notes;
+
+  @override
+  String toString() {
+    return 'DeliveryEvent.receiveFromOffice(packageId: $packageId, notes: $notes)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ReceiveFromOfficeImpl &&
+            (identical(other.packageId, packageId) ||
+                other.packageId == packageId) &&
+            (identical(other.notes, notes) || other.notes == notes));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, packageId, notes);
+
+  /// Create a copy of DeliveryEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ReceiveFromOfficeImplCopyWith<_$ReceiveFromOfficeImpl> get copyWith =>
+      __$$ReceiveFromOfficeImplCopyWithImpl<_$ReceiveFromOfficeImpl>(
+        this,
+        _$identity,
+      );
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(int packageId, String? notes) receiveFromOffice,
+    required TResult Function(int packageId) startDelivery,
+    required TResult Function(
+      int packageId,
+      String status,
+      String? notes,
+      double? lat,
+      double? lng,
+    )
+    updateStatus,
+    required TResult Function(int packageId, bool success, String? notes)
+    contactCustomer,
+    required TResult Function(int packageId, double amount, String? imagePath)
+    collectCod,
+  }) {
+    return receiveFromOffice(packageId, notes);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(int packageId, String? notes)? receiveFromOffice,
+    TResult? Function(int packageId)? startDelivery,
+    TResult? Function(
+      int packageId,
+      String status,
+      String? notes,
+      double? lat,
+      double? lng,
+    )?
+    updateStatus,
+    TResult? Function(int packageId, bool success, String? notes)?
+    contactCustomer,
+    TResult? Function(int packageId, double amount, String? imagePath)?
+    collectCod,
+  }) {
+    return receiveFromOffice?.call(packageId, notes);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int packageId, String? notes)? receiveFromOffice,
+    TResult Function(int packageId)? startDelivery,
+    TResult Function(
+      int packageId,
+      String status,
+      String? notes,
+      double? lat,
+      double? lng,
+    )?
+    updateStatus,
+    TResult Function(int packageId, bool success, String? notes)?
+    contactCustomer,
+    TResult Function(int packageId, double amount, String? imagePath)?
+    collectCod,
+    required TResult orElse(),
+  }) {
+    if (receiveFromOffice != null) {
+      return receiveFromOffice(packageId, notes);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(_ReceiveFromOffice value) receiveFromOffice,
+    required TResult Function(_StartDelivery value) startDelivery,
+    required TResult Function(_UpdateStatus value) updateStatus,
+    required TResult Function(_ContactCustomer value) contactCustomer,
+    required TResult Function(_CollectCod value) collectCod,
+  }) {
+    return receiveFromOffice(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(_ReceiveFromOffice value)? receiveFromOffice,
+    TResult? Function(_StartDelivery value)? startDelivery,
+    TResult? Function(_UpdateStatus value)? updateStatus,
+    TResult? Function(_ContactCustomer value)? contactCustomer,
+    TResult? Function(_CollectCod value)? collectCod,
+  }) {
+    return receiveFromOffice?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(_ReceiveFromOffice value)? receiveFromOffice,
+    TResult Function(_StartDelivery value)? startDelivery,
+    TResult Function(_UpdateStatus value)? updateStatus,
+    TResult Function(_ContactCustomer value)? contactCustomer,
+    TResult Function(_CollectCod value)? collectCod,
+    required TResult orElse(),
+  }) {
+    if (receiveFromOffice != null) {
+      return receiveFromOffice(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class _ReceiveFromOffice implements DeliveryEvent {
+  const factory _ReceiveFromOffice({
+    required final int packageId,
+    final String? notes,
+  }) = _$ReceiveFromOfficeImpl;
+
+  @override
+  int get packageId;
+  String? get notes;
+
+  /// Create a copy of DeliveryEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$ReceiveFromOfficeImplCopyWith<_$ReceiveFromOfficeImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -207,6 +419,7 @@ class _$StartDeliveryImpl implements _StartDelivery {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
+    required TResult Function(int packageId, String? notes) receiveFromOffice,
     required TResult Function(int packageId) startDelivery,
     required TResult Function(
       int packageId,
@@ -227,6 +440,7 @@ class _$StartDeliveryImpl implements _StartDelivery {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(int packageId, String? notes)? receiveFromOffice,
     TResult? Function(int packageId)? startDelivery,
     TResult? Function(
       int packageId,
@@ -247,6 +461,7 @@ class _$StartDeliveryImpl implements _StartDelivery {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int packageId, String? notes)? receiveFromOffice,
     TResult Function(int packageId)? startDelivery,
     TResult Function(
       int packageId,
@@ -271,6 +486,7 @@ class _$StartDeliveryImpl implements _StartDelivery {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(_ReceiveFromOffice value) receiveFromOffice,
     required TResult Function(_StartDelivery value) startDelivery,
     required TResult Function(_UpdateStatus value) updateStatus,
     required TResult Function(_ContactCustomer value) contactCustomer,
@@ -282,6 +498,7 @@ class _$StartDeliveryImpl implements _StartDelivery {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult? Function(_StartDelivery value)? startDelivery,
     TResult? Function(_UpdateStatus value)? updateStatus,
     TResult? Function(_ContactCustomer value)? contactCustomer,
@@ -293,6 +510,7 @@ class _$StartDeliveryImpl implements _StartDelivery {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult Function(_StartDelivery value)? startDelivery,
     TResult Function(_UpdateStatus value)? updateStatus,
     TResult Function(_ContactCustomer value)? contactCustomer,
@@ -441,6 +659,7 @@ class _$UpdateStatusImpl implements _UpdateStatus {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
+    required TResult Function(int packageId, String? notes) receiveFromOffice,
     required TResult Function(int packageId) startDelivery,
     required TResult Function(
       int packageId,
@@ -461,6 +680,7 @@ class _$UpdateStatusImpl implements _UpdateStatus {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(int packageId, String? notes)? receiveFromOffice,
     TResult? Function(int packageId)? startDelivery,
     TResult? Function(
       int packageId,
@@ -481,6 +701,7 @@ class _$UpdateStatusImpl implements _UpdateStatus {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int packageId, String? notes)? receiveFromOffice,
     TResult Function(int packageId)? startDelivery,
     TResult Function(
       int packageId,
@@ -505,6 +726,7 @@ class _$UpdateStatusImpl implements _UpdateStatus {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(_ReceiveFromOffice value) receiveFromOffice,
     required TResult Function(_StartDelivery value) startDelivery,
     required TResult Function(_UpdateStatus value) updateStatus,
     required TResult Function(_ContactCustomer value) contactCustomer,
@@ -516,6 +738,7 @@ class _$UpdateStatusImpl implements _UpdateStatus {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult? Function(_StartDelivery value)? startDelivery,
     TResult? Function(_UpdateStatus value)? updateStatus,
     TResult? Function(_ContactCustomer value)? contactCustomer,
@@ -527,6 +750,7 @@ class _$UpdateStatusImpl implements _UpdateStatus {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult Function(_StartDelivery value)? startDelivery,
     TResult Function(_UpdateStatus value)? updateStatus,
     TResult Function(_ContactCustomer value)? contactCustomer,
@@ -662,6 +886,7 @@ class _$ContactCustomerImpl implements _ContactCustomer {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
+    required TResult Function(int packageId, String? notes) receiveFromOffice,
     required TResult Function(int packageId) startDelivery,
     required TResult Function(
       int packageId,
@@ -682,6 +907,7 @@ class _$ContactCustomerImpl implements _ContactCustomer {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(int packageId, String? notes)? receiveFromOffice,
     TResult? Function(int packageId)? startDelivery,
     TResult? Function(
       int packageId,
@@ -702,6 +928,7 @@ class _$ContactCustomerImpl implements _ContactCustomer {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int packageId, String? notes)? receiveFromOffice,
     TResult Function(int packageId)? startDelivery,
     TResult Function(
       int packageId,
@@ -726,6 +953,7 @@ class _$ContactCustomerImpl implements _ContactCustomer {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(_ReceiveFromOffice value) receiveFromOffice,
     required TResult Function(_StartDelivery value) startDelivery,
     required TResult Function(_UpdateStatus value) updateStatus,
     required TResult Function(_ContactCustomer value) contactCustomer,
@@ -737,6 +965,7 @@ class _$ContactCustomerImpl implements _ContactCustomer {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult? Function(_StartDelivery value)? startDelivery,
     TResult? Function(_UpdateStatus value)? updateStatus,
     TResult? Function(_ContactCustomer value)? contactCustomer,
@@ -748,6 +977,7 @@ class _$ContactCustomerImpl implements _ContactCustomer {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult Function(_StartDelivery value)? startDelivery,
     TResult Function(_UpdateStatus value)? updateStatus,
     TResult Function(_ContactCustomer value)? contactCustomer,
@@ -877,6 +1107,7 @@ class _$CollectCodImpl implements _CollectCod {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
+    required TResult Function(int packageId, String? notes) receiveFromOffice,
     required TResult Function(int packageId) startDelivery,
     required TResult Function(
       int packageId,
@@ -897,6 +1128,7 @@ class _$CollectCodImpl implements _CollectCod {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(int packageId, String? notes)? receiveFromOffice,
     TResult? Function(int packageId)? startDelivery,
     TResult? Function(
       int packageId,
@@ -917,6 +1149,7 @@ class _$CollectCodImpl implements _CollectCod {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int packageId, String? notes)? receiveFromOffice,
     TResult Function(int packageId)? startDelivery,
     TResult Function(
       int packageId,
@@ -941,6 +1174,7 @@ class _$CollectCodImpl implements _CollectCod {
   @override
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(_ReceiveFromOffice value) receiveFromOffice,
     required TResult Function(_StartDelivery value) startDelivery,
     required TResult Function(_UpdateStatus value) updateStatus,
     required TResult Function(_ContactCustomer value) contactCustomer,
@@ -952,6 +1186,7 @@ class _$CollectCodImpl implements _CollectCod {
   @override
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult? Function(_StartDelivery value)? startDelivery,
     TResult? Function(_UpdateStatus value)? updateStatus,
     TResult? Function(_ContactCustomer value)? contactCustomer,
@@ -963,6 +1198,7 @@ class _$CollectCodImpl implements _CollectCod {
   @override
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(_ReceiveFromOffice value)? receiveFromOffice,
     TResult Function(_StartDelivery value)? startDelivery,
     TResult Function(_UpdateStatus value)? updateStatus,
     TResult Function(_ContactCustomer value)? contactCustomer,

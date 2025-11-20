@@ -102,35 +102,12 @@
         
         map = new maplibregl.Map({
             container: 'map',
-            // Using CartoDB Positron style - clean map without prominent boundaries
-            style: {
-                version: 8,
-                sources: {
-                    'carto-tiles': {
-                        type: 'raster',
-                        tiles: [
-                            'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-                            'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-                            'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
-                        ],
-                        tileSize: 256,
-                        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions">CARTO</a>',
-                        scheme: 'xyz'
-                    }
-                },
-                layers: [
-                    {
-                        id: 'carto-tiles',
-                        type: 'raster',
-                        source: 'carto-tiles',
-                        minzoom: 0,
-                        maxzoom: 19
-                    }
-                ],
-                glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf'
-            },
+            // Using MapTiler Streets v2 style
+            style: 'https://api.maptiler.com/maps/streets-v2/style.json?key=2FU1Toy7etAR00Vzt5Ho',
             center: defaultCenter,
             zoom: 12,
+            minZoom: 0,
+            maxZoom: 22, // MapTiler supports up to zoom 22
             // Performance optimizations
             antialias: false,
             preserveDrawingBuffer: false,
@@ -140,6 +117,34 @@
         // Add navigation controls
         map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
+        // Prevent zooming beyond limits to avoid white screen
+        const minZoom = 0;
+        const maxZoom = 22; // MapTiler supports up to zoom 22
+        
+        // Clamp zoom level when zoom ends to prevent white screen
+        map.on('zoomend', function() {
+            const currentZoom = map.getZoom();
+            
+            // Clamp zoom level if it exceeds limits
+            if (currentZoom < minZoom) {
+                map.setZoom(minZoom);
+            } else if (currentZoom > maxZoom) {
+                map.setZoom(maxZoom);
+            }
+        });
+        
+        // Also clamp during zoom to prevent going beyond limits
+        map.on('zoom', function() {
+            const currentZoom = map.getZoom();
+            
+            // Clamp zoom level if it exceeds limits
+            if (currentZoom < minZoom) {
+                map.setZoom(minZoom);
+            } else if (currentZoom > maxZoom) {
+                map.setZoom(maxZoom);
+            }
+        });
+
         // Wait for map to load before adding markers
         map.on('load', function() {
             // Hide loading indicator
@@ -147,7 +152,10 @@
             if (loadingIndicator) {
                 loadingIndicator.style.display = 'none';
             }
-            loadRiderLocations();
+            // Load rider locations after map is ready
+            setTimeout(() => {
+                loadRiderLocations();
+            }, 100); // Small delay to ensure map is fully rendered
         });
         
         // Handle map errors
@@ -161,20 +169,42 @@
     }
 
     function loadRiderLocations() {
+        // Show loading state
+        document.getElementById('riderList').innerHTML = '<p class="text-gray-500 text-center">Loading riders...</p>';
+        
+        // Debug: Log the API endpoint and token status
+        console.log('API_BASE:', API_BASE);
+        console.log('Full URL:', `${API_BASE}/riders/locations`);
+        console.log('Token exists:', !!TOKEN);
+        console.log('Token length:', TOKEN ? TOKEN.length : 0);
+        
         fetch(`${API_BASE}/riders/locations`, {
             headers: {
-                'Authorization': `Bearer ${TOKEN}`
+                'Authorization': `Bearer ${TOKEN}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
         })
-        .then(res => res.json())
+        .then(res => {
+            console.log('Response status:', res.status);
+            if (!res.ok) {
+                // Log response text for debugging
+                return res.text().then(text => {
+                    console.error('Error response:', text);
+                    throw new Error(`HTTP error! status: ${res.status}, message: ${text}`);
+                });
+            }
+            return res.json();
+        })
         .then(data => {
-            updateRiderList(data.riders);
-            updateMapMarkers(data.riders);
-            document.getElementById('riderCount').textContent = data.riders.length;
+            console.log('Rider locations data:', data);
+            updateRiderList(data.riders || []);
+            updateMapMarkers(data.riders || []);
+            document.getElementById('riderCount').textContent = (data.riders || []).length;
         })
         .catch(err => {
             console.error('Error loading rider locations:', err);
-            document.getElementById('riderList').innerHTML = '<p class="text-red-500 text-center">Error loading riders</p>';
+            document.getElementById('riderList').innerHTML = '<p class="text-red-500 text-center">Error loading riders: ' + err.message + '</p>';
         });
     }
 
@@ -196,29 +226,44 @@
             const position = [parseFloat(rider.longitude), parseFloat(rider.latitude)]; // [lng, lat] for MapLibre
             bounds.push(position);
 
-            // Determine marker color based on status
-            let markerColor = '#6b7280'; // default gray
-            if (rider.status === 'available') {
-                markerColor = '#10b981'; // green
-            } else if (rider.status === 'busy') {
-                markerColor = '#f59e0b'; // orange
-            }
-
-            // Create a custom HTML element for the marker
+            // Create a custom HTML element for the marker with rider name
             const el = document.createElement('div');
-            el.className = 'rider-marker';
-            el.style.width = '20px';
-            el.style.height = '20px';
-            el.style.borderRadius = '50%';
-            el.style.backgroundColor = markerColor;
-            el.style.border = '3px solid white';
-            el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+            el.style.display = 'flex';
+            el.style.flexDirection = 'column';
+            el.style.alignItems = 'center';
             el.style.cursor = 'pointer';
+            
+            // Red pointer/marker
+            const markerDot = document.createElement('div');
+            markerDot.className = 'rider-marker';
+            markerDot.style.width = '20px';
+            markerDot.style.height = '20px';
+            markerDot.style.borderRadius = '50%';
+            markerDot.style.backgroundColor = '#ef4444'; // Red color
+            markerDot.style.border = '3px solid white';
+            markerDot.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+            
+            // Rider name label
+            const nameLabel = document.createElement('div');
+            nameLabel.textContent = rider.name;
+            nameLabel.style.marginTop = '4px';
+            nameLabel.style.padding = '2px 6px';
+            nameLabel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            nameLabel.style.color = 'white';
+            nameLabel.style.fontSize = '11px';
+            nameLabel.style.fontWeight = '600';
+            nameLabel.style.borderRadius = '4px';
+            nameLabel.style.whiteSpace = 'nowrap';
+            nameLabel.style.textAlign = 'center';
+            nameLabel.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
+            
+            el.appendChild(markerDot);
+            el.appendChild(nameLabel);
 
             // Create marker
             const marker = new maplibregl.Marker({
                 element: el,
-                anchor: 'center'
+                anchor: 'bottom'
             })
             .setLngLat(position)
             .addTo(map);
@@ -247,7 +292,8 @@
             if (bounds.length === 1) {
                 // Single rider - just center on it
                 map.setCenter(bounds[0]);
-                map.setZoom(15);
+                const zoom = Math.min(15, 22); // Clamp to max zoom
+                map.setZoom(zoom);
             } else {
                 // Multiple riders - fit bounds
                 const bbox = bounds.reduce((acc, coord) => {
@@ -259,7 +305,7 @@
 
                 map.fitBounds(bbox, {
                     padding: 50,
-                    maxZoom: 15
+                    maxZoom: 22 // Clamp to max zoom
                 });
             }
         }
@@ -298,9 +344,10 @@
         const marker = markers[riderId];
         if (marker) {
             const lngLat = marker.getLngLat();
+            const zoom = Math.min(16, 22); // Clamp to max zoom
             map.flyTo({
                 center: [lngLat.lng, lngLat.lat],
-                zoom: 16
+                zoom: zoom
             });
             marker.togglePopup();
         }
@@ -335,6 +382,80 @@
     } else {
         initMap();
     }
+    
+    // WebSocket: Listen for real-time rider location updates
+    if (window.WebSocketHelper && window.WebSocketHelper.isConnected()) {
+        const riderLocationChannel = window.WebSocketHelper.connect('office.riders.locations', 'rider.location.updated', function(data) {
+            // Update rider location on map in real-time
+            updateRiderLocationOnMap(data);
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (riderLocationChannel) {
+                window.WebSocketHelper.disconnect(riderLocationChannel);
+            }
+        });
+    }
+    
+    function updateRiderLocationOnMap(data) {
+        if (!map || !data.latitude || !data.longitude) return;
+        
+        const riderId = data.rider_id;
+        const position = [parseFloat(data.longitude), parseFloat(data.latitude)];
+        
+        // Update existing marker or create new one
+        if (markers[riderId]) {
+            markers[riderId].setLngLat(position);
+        } else {
+            // Create new marker if it doesn't exist with red pointer and rider name
+            const el = document.createElement('div');
+            el.style.display = 'flex';
+            el.style.flexDirection = 'column';
+            el.style.alignItems = 'center';
+            el.style.cursor = 'pointer';
+            
+            // Red pointer/marker
+            const markerDot = document.createElement('div');
+            markerDot.className = 'rider-marker';
+            markerDot.style.width = '20px';
+            markerDot.style.height = '20px';
+            markerDot.style.borderRadius = '50%';
+            markerDot.style.backgroundColor = '#ef4444'; // Red color
+            markerDot.style.border = '3px solid white';
+            markerDot.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+            
+            // Rider name label
+            const nameLabel = document.createElement('div');
+            nameLabel.textContent = data.name || 'Rider';
+            nameLabel.style.marginTop = '4px';
+            nameLabel.style.padding = '2px 6px';
+            nameLabel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            nameLabel.style.color = 'white';
+            nameLabel.style.fontSize = '11px';
+            nameLabel.style.fontWeight = '600';
+            nameLabel.style.borderRadius = '4px';
+            nameLabel.style.whiteSpace = 'nowrap';
+            nameLabel.style.textAlign = 'center';
+            nameLabel.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
+            
+            el.appendChild(markerDot);
+            el.appendChild(nameLabel);
+            
+            const marker = new maplibregl.Marker({
+                element: el,
+                anchor: 'bottom'
+            })
+            .setLngLat(position)
+            .addTo(map);
+            
+            markers[riderId] = marker;
+        }
+        
+        // Update rider list if needed
+        loadRiderLocations();
+    }
 </script>
 @endpush
 @endsection
+

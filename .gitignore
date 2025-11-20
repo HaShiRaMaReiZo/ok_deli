@@ -1,0 +1,32 @@
+# Sensitive files
+*.json
+!package.json
+!package-lock.json
+!composer.json
+!composer.lock
+!tsconfig.json
+!pubspec.yaml
+!pubspec.lock
+!analysis_options.yaml
+
+# Firebase service account (should be in backend storage, not root)
+*-firebase-adminsdk-*.json
+ok-express-*-firebase-adminsdk-*.json
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+

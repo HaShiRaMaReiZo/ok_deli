@@ -1,5 +1,5 @@
 class ApiEndpoints {
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'https://ok-delivery.onrender.com';
 
   // Auth
   static const String login = '/api/auth/login';
@@ -10,6 +10,8 @@ class ApiEndpoints {
   static const String riderPackages = '/api/rider/packages';
   static String riderPackage(int id) => '/api/rider/packages/$id';
   static String riderStatus(int id) => '/api/rider/packages/$id/status';
+  static String riderReceiveFromOffice(int id) =>
+      '/api/rider/packages/$id/receive-from-office';
   static String riderStart(int id) => '/api/rider/packages/$id/start-delivery';
   static String riderContact(int id) =>
       '/api/rider/packages/$id/contact-customer';

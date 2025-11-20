@@ -48,6 +48,12 @@
         <div class="p-6 border-b flex justify-between items-center">
             <h3 class="text-lg font-semibold text-gray-800">Packages ({{ $packages->total() }})</h3>
             <div class="flex space-x-2">
+                <a href="{{ route('office.registered_packages_by_merchant') }}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm">
+                    <i class="fas fa-store mr-1"></i> View by Merchant
+                </a>
+                <a href="{{ route('office.picked_up_packages') }}" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-sm">
+                    <i class="fas fa-box-open mr-1"></i> Picked Up Packages
+                </a>
                 <button onclick="openBulkAssignModal()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm">
                     <i class="fas fa-user-plus mr-1"></i> Bulk Assign
                 </button>
@@ -94,8 +100,12 @@
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                                 @if($package->status == 'delivered') bg-green-100 text-green-800
                                 @elseif($package->status == 'on_the_way') bg-blue-100 text-blue-800
+                                @elseif($package->status == 'ready_for_delivery') bg-teal-100 text-teal-800
+                                @elseif($package->status == 'arrived_at_office') bg-blue-100 text-blue-800
+                                @elseif($package->status == 'return_to_office') bg-red-100 text-red-800
+                                @elseif($package->status == 'returned_to_merchant') bg-purple-100 text-purple-800
+                                @elseif($package->status == 'cancelled') bg-gray-100 text-gray-800
                                 @elseif($package->status == 'registered') bg-yellow-100 text-yellow-800
-                                @elseif($package->status == 'returned_to_office') bg-red-100 text-red-800
                                 @else bg-gray-100 text-gray-800
                                 @endif">
                                 {{ ucfirst(str_replace('_', ' ', $package->status)) }}
@@ -115,9 +125,38 @@
                                 <button onclick="viewPackage({{ $package->id }})" class="text-blue-600 hover:text-blue-900">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button onclick="assignPackage({{ $package->id }})" class="text-green-600 hover:text-green-900">
-                                    <i class="fas fa-user-plus"></i>
-                                </button>
+                                @if($package->status == 'arrived_at_office')
+                                    <button onclick="assignPackage({{ $package->id }})" class="text-green-600 hover:text-green-900">
+                                        <i class="fas fa-user-plus"></i>
+                                    </button>
+                                @elseif($package->status == 'return_to_office')
+                                    @php
+                                        // Get the status before return_to_office from status history
+                                        // Sort by created_at descending to get most recent first
+                                        $statusHistory = $package->statusHistory->sortByDesc('created_at')->values();
+                                        $previousStatus = null;
+                                        
+                                        // Find the return_to_office entry
+                                        $returnToOfficeIndex = null;
+                                        foreach ($statusHistory as $index => $history) {
+                                            if ($history->status == 'return_to_office') {
+                                                $returnToOfficeIndex = $index;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        // Get the status right before return_to_office
+                                        if ($returnToOfficeIndex !== null && isset($statusHistory[$returnToOfficeIndex + 1])) {
+                                            $previousStatus = $statusHistory[$returnToOfficeIndex + 1]->status;
+                                        }
+                                    @endphp
+                                    @if($previousStatus == 'cancelled')
+                                        <button onclick="returnToMerchant({{ $package->id }})" class="text-purple-600 hover:text-purple-900" title="Return to Merchant">
+                                            <i class="fas fa-store"></i>
+                                        </button>
+                                    @endif
+                                    {{-- contact_failed packages are automatically reassigned (status becomes arrived_at_office) --}}
+                                @endif
                             </div>
                         </td>
                     </tr>
@@ -286,17 +325,24 @@
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer {{ $apiToken }}',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'Accept': 'application/json'
             },
             body: JSON.stringify({ rider_id: riderId })
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => {
+                    throw new Error(err.message || 'Failed to assign package');
+                });
+            }
+            return res.json();
+        })
         .then(data => {
             alert('Package assigned successfully');
             location.reload();
         })
         .catch(err => {
-            alert('Error assigning package');
+            alert('Error assigning package: ' + err.message);
             console.error(err);
         });
     }
@@ -324,22 +370,97 @@
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer {{ $apiToken }}',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'Accept': 'application/json'
             },
             body: JSON.stringify({ 
                 package_ids: selected,
                 rider_id: riderId
             })
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => {
+                    throw new Error(err.message || 'Failed to assign packages');
+                });
+            }
+            return res.json();
+        })
         .then(data => {
             alert(`Successfully assigned ${data.assigned_count} packages`);
             location.reload();
         })
         .catch(err => {
-            alert('Error assigning packages');
+            alert('Error assigning packages: ' + err.message);
             console.error(err);
         });
+    }
+    
+    function returnToMerchant(id) {
+        if (!confirm('Mark this package as returned to merchant?')) {
+            return;
+        }
+
+        fetch(`/api/office/packages/${id}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer {{ $apiToken }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ 
+                status: 'returned_to_merchant',
+                notes: 'Package returned to merchant shop'
+            })
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => {
+                    throw new Error(err.message || 'Failed to update package status');
+                });
+            }
+            return res.json();
+        })
+        .then(data => {
+            alert('Package marked as returned to merchant successfully!');
+            location.reload();
+        })
+        .catch(err => {
+            alert('Error updating status: ' + err.message);
+            console.error(err);
+        });
+    }
+
+    {{-- reassignForNextDay function removed - contact_failed packages are automatically reassigned --}}
+
+    // WebSocket: Listen for package status changes
+    if (window.WebSocketHelper && window.WebSocketHelper.isConnected()) {
+        const packageChannel = window.WebSocketHelper.connect('office.packages', 'package.status.changed', function(data) {
+            // Show notification
+            showNotification('Package #' + data.package_id + ' status updated: ' + data.status, 'info');
+            // Reload page after 2 seconds to show updated data
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (packageChannel) {
+                window.WebSocketHelper.disconnect(packageChannel);
+            }
+        });
+    }
+    
+    function showNotification(message, type) {
+        const bgColor = type === 'info' ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-green-100 border-green-400 text-green-700';
+        const notification = document.createElement('div');
+        notification.className = `mb-4 border px-4 py-3 rounded relative ${bgColor}`;
+        notification.innerHTML = `<span>${message}</span>`;
+        const main = document.querySelector('main');
+        if (main) {
+            main.insertBefore(notification, main.firstChild);
+            setTimeout(() => notification.remove(), 5000);
+        }
     }
 </script>
 @endpush

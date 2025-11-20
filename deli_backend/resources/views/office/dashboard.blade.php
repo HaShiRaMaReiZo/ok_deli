@@ -161,4 +161,36 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    // WebSocket: Listen for package status changes
+    if (window.WebSocketHelper && window.WebSocketHelper.isConnected()) {
+        const packageChannel = window.WebSocketHelper.connect('office.packages', 'package.status.changed', function(data) {
+            // Show notification
+            showNotification('Package status updated: ' + data.status, 'info');
+            // Reload page after 2 seconds to show updated data
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (packageChannel) {
+                window.WebSocketHelper.disconnect(packageChannel);
+            }
+        });
+    }
+    
+    function showNotification(message, type) {
+        const bgColor = type === 'info' ? 'bg-blue-100 border-blue-400 text-blue-700' : 'bg-green-100 border-green-400 text-green-700';
+        const notification = document.createElement('div');
+        notification.className = `mb-4 border px-4 py-3 rounded relative ${bgColor}`;
+        notification.innerHTML = `<span>${message}</span>`;
+        document.querySelector('main').insertBefore(notification, document.querySelector('main').firstChild);
+        setTimeout(() => notification.remove(), 5000);
+    }
+</script>
+@endpush
 @endsection

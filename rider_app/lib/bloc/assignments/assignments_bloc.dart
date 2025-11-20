@@ -1,4 +1,5 @@
 import 'package:bloc/bloc.dart';
+import 'package:dio/dio.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../repositories/rider_package_repository.dart';
 
@@ -14,7 +15,10 @@ class AssignmentsBloc extends Bloc<AssignmentsEvent, AssignmentsState> {
         final items = await repository.list();
         emit(AssignmentsState.loaded(assignments: items));
       } catch (e) {
-        emit(AssignmentsState.failure(message: e.toString()));
+        final errorMessage = e is DioException && e.error is String
+            ? e.error as String
+            : e.toString();
+        emit(AssignmentsState.failure(message: errorMessage));
       }
     });
   }

@@ -19,34 +19,40 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$LocationEvent {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(double lat, double lng, int? packageId) start,
+    required TResult Function(int? packageId) start,
     required TResult Function() stop,
+    required TResult Function(String error) errorOccurred,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(double lat, double lng, int? packageId)? start,
+    TResult? Function(int? packageId)? start,
     TResult? Function()? stop,
+    TResult? Function(String error)? errorOccurred,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(double lat, double lng, int? packageId)? start,
+    TResult Function(int? packageId)? start,
     TResult Function()? stop,
+    TResult Function(String error)? errorOccurred,
     required TResult orElse(),
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(_Start value) start,
     required TResult Function(_Stop value) stop,
+    required TResult Function(_ErrorOccurred value) errorOccurred,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(_Start value)? start,
     TResult? Function(_Stop value)? stop,
+    TResult? Function(_ErrorOccurred value)? errorOccurred,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
     TResult Function(_Start value)? start,
     TResult Function(_Stop value)? stop,
+    TResult Function(_ErrorOccurred value)? errorOccurred,
     required TResult orElse(),
   }) => throw _privateConstructorUsedError;
 }
@@ -80,7 +86,7 @@ abstract class _$$StartImplCopyWith<$Res> {
     $Res Function(_$StartImpl) then,
   ) = __$$StartImplCopyWithImpl<$Res>;
   @useResult
-  $Res call({double lat, double lng, int? packageId});
+  $Res call({int? packageId});
 }
 
 /// @nodoc
@@ -96,21 +102,9 @@ class __$$StartImplCopyWithImpl<$Res>
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? lat = null,
-    Object? lng = null,
-    Object? packageId = freezed,
-  }) {
+  $Res call({Object? packageId = freezed}) {
     return _then(
       _$StartImpl(
-        lat: null == lat
-            ? _value.lat
-            : lat // ignore: cast_nullable_to_non_nullable
-                  as double,
-        lng: null == lng
-            ? _value.lng
-            : lng // ignore: cast_nullable_to_non_nullable
-                  as double,
         packageId: freezed == packageId
             ? _value.packageId
             : packageId // ignore: cast_nullable_to_non_nullable
@@ -122,19 +116,23 @@ class __$$StartImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$StartImpl implements _Start {
-  const _$StartImpl({required this.lat, required this.lng, this.packageId});
+class _$StartImpl with DiagnosticableTreeMixin implements _Start {
+  const _$StartImpl({required this.packageId});
 
-  @override
-  final double lat;
-  @override
-  final double lng;
   @override
   final int? packageId;
 
   @override
-  String toString() {
-    return 'LocationEvent.start(lat: $lat, lng: $lng, packageId: $packageId)';
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
+    return 'LocationEvent.start(packageId: $packageId)';
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(DiagnosticsProperty('type', 'LocationEvent.start'))
+      ..add(DiagnosticsProperty('packageId', packageId));
   }
 
   @override
@@ -142,14 +140,12 @@ class _$StartImpl implements _Start {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$StartImpl &&
-            (identical(other.lat, lat) || other.lat == lat) &&
-            (identical(other.lng, lng) || other.lng == lng) &&
             (identical(other.packageId, packageId) ||
                 other.packageId == packageId));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, lat, lng, packageId);
+  int get hashCode => Object.hash(runtimeType, packageId);
 
   /// Create a copy of LocationEvent
   /// with the given fields replaced by the non-null parameter values.
@@ -162,30 +158,33 @@ class _$StartImpl implements _Start {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(double lat, double lng, int? packageId) start,
+    required TResult Function(int? packageId) start,
     required TResult Function() stop,
+    required TResult Function(String error) errorOccurred,
   }) {
-    return start(lat, lng, packageId);
+    return start(packageId);
   }
 
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(double lat, double lng, int? packageId)? start,
+    TResult? Function(int? packageId)? start,
     TResult? Function()? stop,
+    TResult? Function(String error)? errorOccurred,
   }) {
-    return start?.call(lat, lng, packageId);
+    return start?.call(packageId);
   }
 
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(double lat, double lng, int? packageId)? start,
+    TResult Function(int? packageId)? start,
     TResult Function()? stop,
+    TResult Function(String error)? errorOccurred,
     required TResult orElse(),
   }) {
     if (start != null) {
-      return start(lat, lng, packageId);
+      return start(packageId);
     }
     return orElse();
   }
@@ -195,6 +194,7 @@ class _$StartImpl implements _Start {
   TResult map<TResult extends Object?>({
     required TResult Function(_Start value) start,
     required TResult Function(_Stop value) stop,
+    required TResult Function(_ErrorOccurred value) errorOccurred,
   }) {
     return start(this);
   }
@@ -204,6 +204,7 @@ class _$StartImpl implements _Start {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(_Start value)? start,
     TResult? Function(_Stop value)? stop,
+    TResult? Function(_ErrorOccurred value)? errorOccurred,
   }) {
     return start?.call(this);
   }
@@ -213,6 +214,7 @@ class _$StartImpl implements _Start {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(_Start value)? start,
     TResult Function(_Stop value)? stop,
+    TResult Function(_ErrorOccurred value)? errorOccurred,
     required TResult orElse(),
   }) {
     if (start != null) {
@@ -223,14 +225,8 @@ class _$StartImpl implements _Start {
 }
 
 abstract class _Start implements LocationEvent {
-  const factory _Start({
-    required final double lat,
-    required final double lng,
-    final int? packageId,
-  }) = _$StartImpl;
+  const factory _Start({required final int? packageId}) = _$StartImpl;
 
-  double get lat;
-  double get lng;
   int? get packageId;
 
   /// Create a copy of LocationEvent
@@ -261,12 +257,18 @@ class __$$StopImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$StopImpl implements _Stop {
+class _$StopImpl with DiagnosticableTreeMixin implements _Stop {
   const _$StopImpl();
 
   @override
-  String toString() {
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
     return 'LocationEvent.stop()';
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties..add(DiagnosticsProperty('type', 'LocationEvent.stop'));
   }
 
   @override
@@ -281,8 +283,9 @@ class _$StopImpl implements _Stop {
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
-    required TResult Function(double lat, double lng, int? packageId) start,
+    required TResult Function(int? packageId) start,
     required TResult Function() stop,
+    required TResult Function(String error) errorOccurred,
   }) {
     return stop();
   }
@@ -290,8 +293,9 @@ class _$StopImpl implements _Stop {
   @override
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(double lat, double lng, int? packageId)? start,
+    TResult? Function(int? packageId)? start,
     TResult? Function()? stop,
+    TResult? Function(String error)? errorOccurred,
   }) {
     return stop?.call();
   }
@@ -299,8 +303,9 @@ class _$StopImpl implements _Stop {
   @override
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
-    TResult Function(double lat, double lng, int? packageId)? start,
+    TResult Function(int? packageId)? start,
     TResult Function()? stop,
+    TResult Function(String error)? errorOccurred,
     required TResult orElse(),
   }) {
     if (stop != null) {
@@ -314,6 +319,7 @@ class _$StopImpl implements _Stop {
   TResult map<TResult extends Object?>({
     required TResult Function(_Start value) start,
     required TResult Function(_Stop value) stop,
+    required TResult Function(_ErrorOccurred value) errorOccurred,
   }) {
     return stop(this);
   }
@@ -323,6 +329,7 @@ class _$StopImpl implements _Stop {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(_Start value)? start,
     TResult? Function(_Stop value)? stop,
+    TResult? Function(_ErrorOccurred value)? errorOccurred,
   }) {
     return stop?.call(this);
   }
@@ -332,6 +339,7 @@ class _$StopImpl implements _Stop {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(_Start value)? start,
     TResult Function(_Stop value)? stop,
+    TResult Function(_ErrorOccurred value)? errorOccurred,
     required TResult orElse(),
   }) {
     if (stop != null) {
@@ -346,37 +354,201 @@ abstract class _Stop implements LocationEvent {
 }
 
 /// @nodoc
+abstract class _$$ErrorOccurredImplCopyWith<$Res> {
+  factory _$$ErrorOccurredImplCopyWith(
+    _$ErrorOccurredImpl value,
+    $Res Function(_$ErrorOccurredImpl) then,
+  ) = __$$ErrorOccurredImplCopyWithImpl<$Res>;
+  @useResult
+  $Res call({String error});
+}
+
+/// @nodoc
+class __$$ErrorOccurredImplCopyWithImpl<$Res>
+    extends _$LocationEventCopyWithImpl<$Res, _$ErrorOccurredImpl>
+    implements _$$ErrorOccurredImplCopyWith<$Res> {
+  __$$ErrorOccurredImplCopyWithImpl(
+    _$ErrorOccurredImpl _value,
+    $Res Function(_$ErrorOccurredImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of LocationEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? error = null}) {
+    return _then(
+      _$ErrorOccurredImpl(
+        null == error
+            ? _value.error
+            : error // ignore: cast_nullable_to_non_nullable
+                  as String,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+
+class _$ErrorOccurredImpl
+    with DiagnosticableTreeMixin
+    implements _ErrorOccurred {
+  const _$ErrorOccurredImpl(this.error);
+
+  @override
+  final String error;
+
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
+    return 'LocationEvent.errorOccurred(error: $error)';
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(DiagnosticsProperty('type', 'LocationEvent.errorOccurred'))
+      ..add(DiagnosticsProperty('error', error));
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ErrorOccurredImpl &&
+            (identical(other.error, error) || other.error == error));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, error);
+
+  /// Create a copy of LocationEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ErrorOccurredImplCopyWith<_$ErrorOccurredImpl> get copyWith =>
+      __$$ErrorOccurredImplCopyWithImpl<_$ErrorOccurredImpl>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(int? packageId) start,
+    required TResult Function() stop,
+    required TResult Function(String error) errorOccurred,
+  }) {
+    return errorOccurred(error);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(int? packageId)? start,
+    TResult? Function()? stop,
+    TResult? Function(String error)? errorOccurred,
+  }) {
+    return errorOccurred?.call(error);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int? packageId)? start,
+    TResult Function()? stop,
+    TResult Function(String error)? errorOccurred,
+    required TResult orElse(),
+  }) {
+    if (errorOccurred != null) {
+      return errorOccurred(error);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(_Start value) start,
+    required TResult Function(_Stop value) stop,
+    required TResult Function(_ErrorOccurred value) errorOccurred,
+  }) {
+    return errorOccurred(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(_Start value)? start,
+    TResult? Function(_Stop value)? stop,
+    TResult? Function(_ErrorOccurred value)? errorOccurred,
+  }) {
+    return errorOccurred?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(_Start value)? start,
+    TResult Function(_Stop value)? stop,
+    TResult Function(_ErrorOccurred value)? errorOccurred,
+    required TResult orElse(),
+  }) {
+    if (errorOccurred != null) {
+      return errorOccurred(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class _ErrorOccurred implements LocationEvent {
+  const factory _ErrorOccurred(final String error) = _$ErrorOccurredImpl;
+
+  String get error;
+
+  /// Create a copy of LocationEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$ErrorOccurredImplCopyWith<_$ErrorOccurredImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
 mixin _$LocationState {
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() idle,
     required TResult Function() active,
+    required TResult Function(String message) error,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? idle,
     TResult? Function()? active,
+    TResult? Function(String message)? error,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? idle,
     TResult Function()? active,
+    TResult Function(String message)? error,
     required TResult orElse(),
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
     required TResult Function(_Idle value) idle,
     required TResult Function(_Active value) active,
+    required TResult Function(_Error value) error,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(_Idle value)? idle,
     TResult? Function(_Active value)? active,
+    TResult? Function(_Error value)? error,
   }) => throw _privateConstructorUsedError;
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
     TResult Function(_Idle value)? idle,
     TResult Function(_Active value)? active,
+    TResult Function(_Error value)? error,
     required TResult orElse(),
   }) => throw _privateConstructorUsedError;
 }
@@ -424,12 +596,18 @@ class __$$IdleImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$IdleImpl implements _Idle {
+class _$IdleImpl with DiagnosticableTreeMixin implements _Idle {
   const _$IdleImpl();
 
   @override
-  String toString() {
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
     return 'LocationState.idle()';
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties..add(DiagnosticsProperty('type', 'LocationState.idle'));
   }
 
   @override
@@ -446,6 +624,7 @@ class _$IdleImpl implements _Idle {
   TResult when<TResult extends Object?>({
     required TResult Function() idle,
     required TResult Function() active,
+    required TResult Function(String message) error,
   }) {
     return idle();
   }
@@ -455,6 +634,7 @@ class _$IdleImpl implements _Idle {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? idle,
     TResult? Function()? active,
+    TResult? Function(String message)? error,
   }) {
     return idle?.call();
   }
@@ -464,6 +644,7 @@ class _$IdleImpl implements _Idle {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? idle,
     TResult Function()? active,
+    TResult Function(String message)? error,
     required TResult orElse(),
   }) {
     if (idle != null) {
@@ -477,6 +658,7 @@ class _$IdleImpl implements _Idle {
   TResult map<TResult extends Object?>({
     required TResult Function(_Idle value) idle,
     required TResult Function(_Active value) active,
+    required TResult Function(_Error value) error,
   }) {
     return idle(this);
   }
@@ -486,6 +668,7 @@ class _$IdleImpl implements _Idle {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(_Idle value)? idle,
     TResult? Function(_Active value)? active,
+    TResult? Function(_Error value)? error,
   }) {
     return idle?.call(this);
   }
@@ -495,6 +678,7 @@ class _$IdleImpl implements _Idle {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(_Idle value)? idle,
     TResult Function(_Active value)? active,
+    TResult Function(_Error value)? error,
     required TResult orElse(),
   }) {
     if (idle != null) {
@@ -531,12 +715,18 @@ class __$$ActiveImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$ActiveImpl implements _Active {
+class _$ActiveImpl with DiagnosticableTreeMixin implements _Active {
   const _$ActiveImpl();
 
   @override
-  String toString() {
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
     return 'LocationState.active()';
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties..add(DiagnosticsProperty('type', 'LocationState.active'));
   }
 
   @override
@@ -553,6 +743,7 @@ class _$ActiveImpl implements _Active {
   TResult when<TResult extends Object?>({
     required TResult Function() idle,
     required TResult Function() active,
+    required TResult Function(String message) error,
   }) {
     return active();
   }
@@ -562,6 +753,7 @@ class _$ActiveImpl implements _Active {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? idle,
     TResult? Function()? active,
+    TResult? Function(String message)? error,
   }) {
     return active?.call();
   }
@@ -571,6 +763,7 @@ class _$ActiveImpl implements _Active {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? idle,
     TResult Function()? active,
+    TResult Function(String message)? error,
     required TResult orElse(),
   }) {
     if (active != null) {
@@ -584,6 +777,7 @@ class _$ActiveImpl implements _Active {
   TResult map<TResult extends Object?>({
     required TResult Function(_Idle value) idle,
     required TResult Function(_Active value) active,
+    required TResult Function(_Error value) error,
   }) {
     return active(this);
   }
@@ -593,6 +787,7 @@ class _$ActiveImpl implements _Active {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(_Idle value)? idle,
     TResult? Function(_Active value)? active,
+    TResult? Function(_Error value)? error,
   }) {
     return active?.call(this);
   }
@@ -602,6 +797,7 @@ class _$ActiveImpl implements _Active {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(_Idle value)? idle,
     TResult Function(_Active value)? active,
+    TResult Function(_Error value)? error,
     required TResult orElse(),
   }) {
     if (active != null) {
@@ -613,4 +809,160 @@ class _$ActiveImpl implements _Active {
 
 abstract class _Active implements LocationState {
   const factory _Active() = _$ActiveImpl;
+}
+
+/// @nodoc
+abstract class _$$ErrorImplCopyWith<$Res> {
+  factory _$$ErrorImplCopyWith(
+    _$ErrorImpl value,
+    $Res Function(_$ErrorImpl) then,
+  ) = __$$ErrorImplCopyWithImpl<$Res>;
+  @useResult
+  $Res call({String message});
+}
+
+/// @nodoc
+class __$$ErrorImplCopyWithImpl<$Res>
+    extends _$LocationStateCopyWithImpl<$Res, _$ErrorImpl>
+    implements _$$ErrorImplCopyWith<$Res> {
+  __$$ErrorImplCopyWithImpl(
+    _$ErrorImpl _value,
+    $Res Function(_$ErrorImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of LocationState
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? message = null}) {
+    return _then(
+      _$ErrorImpl(
+        null == message
+            ? _value.message
+            : message // ignore: cast_nullable_to_non_nullable
+                  as String,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+
+class _$ErrorImpl with DiagnosticableTreeMixin implements _Error {
+  const _$ErrorImpl(this.message);
+
+  @override
+  final String message;
+
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
+    return 'LocationState.error(message: $message)';
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(DiagnosticsProperty('type', 'LocationState.error'))
+      ..add(DiagnosticsProperty('message', message));
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$ErrorImpl &&
+            (identical(other.message, message) || other.message == message));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, message);
+
+  /// Create a copy of LocationState
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$ErrorImplCopyWith<_$ErrorImpl> get copyWith =>
+      __$$ErrorImplCopyWithImpl<_$ErrorImpl>(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() idle,
+    required TResult Function() active,
+    required TResult Function(String message) error,
+  }) {
+    return error(message);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? idle,
+    TResult? Function()? active,
+    TResult? Function(String message)? error,
+  }) {
+    return error?.call(message);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? idle,
+    TResult Function()? active,
+    TResult Function(String message)? error,
+    required TResult orElse(),
+  }) {
+    if (error != null) {
+      return error(message);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(_Idle value) idle,
+    required TResult Function(_Active value) active,
+    required TResult Function(_Error value) error,
+  }) {
+    return error(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(_Idle value)? idle,
+    TResult? Function(_Active value)? active,
+    TResult? Function(_Error value)? error,
+  }) {
+    return error?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(_Idle value)? idle,
+    TResult Function(_Active value)? active,
+    TResult Function(_Error value)? error,
+    required TResult orElse(),
+  }) {
+    if (error != null) {
+      return error(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class _Error implements LocationState {
+  const factory _Error(final String message) = _$ErrorImpl;
+
+  String get message;
+
+  /// Create a copy of LocationState
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$ErrorImplCopyWith<_$ErrorImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }

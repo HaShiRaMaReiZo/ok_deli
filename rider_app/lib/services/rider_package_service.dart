@@ -31,6 +31,13 @@ class RiderPackageService {
     );
   }
 
+  Future<void> receiveFromOffice(int id, {String? notes}) async {
+    await _client.raw.post(
+      ApiEndpoints.riderReceiveFromOffice(id),
+      data: {if (notes != null) 'notes': notes},
+    );
+  }
+
   Future<void> startDelivery(int id) async {
     await _client.raw.post(ApiEndpoints.riderStart(id));
   }
@@ -66,5 +73,21 @@ class RiderPackageService {
         data: {'amount': amount},
       );
     }
+  }
+
+  Future<void> confirmPickupByMerchant(
+    int merchantId, {
+    String? notes,
+    double? latitude,
+    double? longitude,
+  }) async {
+    await _client.raw.post(
+      '/api/rider/merchants/$merchantId/confirm-pickup',
+      data: {
+        if (notes != null) 'notes': notes,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+      },
+    );
   }
 }

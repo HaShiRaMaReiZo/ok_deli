@@ -9,6 +9,8 @@ class RiderPackageRepository {
     return data.cast<Map<String, dynamic>>();
   }
 
+  Future<void> receiveFromOffice(int id, {String? notes}) =>
+      _service.receiveFromOffice(id, notes: notes);
   Future<void> startDelivery(int id) => _service.startDelivery(id);
   Future<void> updateStatus(
     int id,
@@ -27,4 +29,16 @@ class RiderPackageRepository {
     required double amount,
     String? imagePath,
   }) => _service.collectCod(id, amount: amount, imagePath: imagePath);
+
+  Future<void> confirmPickupByMerchant(
+    int merchantId, {
+    String? notes,
+    double? latitude,
+    double? longitude,
+  }) => _service.confirmPickupByMerchant(
+    merchantId,
+    notes: notes,
+    latitude: latitude,
+    longitude: longitude,
+  );
 }

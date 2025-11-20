@@ -1,4 +1,5 @@
 import 'package:bloc/bloc.dart';
+import 'package:dio/dio.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../repositories/rider_package_repository.dart';
 
@@ -8,6 +9,20 @@ part 'delivery_bloc.freezed.dart';
 
 class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
   DeliveryBloc({required this.repository}) : super(const DeliveryState.idle()) {
+    on<_ReceiveFromOffice>((event, emit) async {
+      emit(const DeliveryState.loading());
+      try {
+        await repository.receiveFromOffice(event.packageId, notes: event.notes);
+        emit(const DeliveryState.success(message: 'Received from office'));
+        emit(const DeliveryState.idle());
+      } catch (e) {
+        final errorMessage = e is DioException && e.error is String
+            ? e.error as String
+            : e.toString();
+        emit(DeliveryState.failure(message: errorMessage));
+      }
+    });
+
     on<_StartDelivery>((event, emit) async {
       emit(const DeliveryState.loading());
       try {
@@ -15,7 +30,10 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
         emit(const DeliveryState.success(message: 'Started'));
         emit(const DeliveryState.idle());
       } catch (e) {
-        emit(DeliveryState.failure(message: e.toString()));
+        final errorMessage = e is DioException && e.error is String
+            ? e.error as String
+            : e.toString();
+        emit(DeliveryState.failure(message: errorMessage));
       }
     });
 
@@ -32,7 +50,10 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
         emit(const DeliveryState.success(message: 'Updated'));
         emit(const DeliveryState.idle());
       } catch (e) {
-        emit(DeliveryState.failure(message: e.toString()));
+        final errorMessage = e is DioException && e.error is String
+            ? e.error as String
+            : e.toString();
+        emit(DeliveryState.failure(message: errorMessage));
       }
     });
 
@@ -47,7 +68,10 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
         emit(const DeliveryState.success(message: 'Contact logged'));
         emit(const DeliveryState.idle());
       } catch (e) {
-        emit(DeliveryState.failure(message: e.toString()));
+        final errorMessage = e is DioException && e.error is String
+            ? e.error as String
+            : e.toString();
+        emit(DeliveryState.failure(message: errorMessage));
       }
     });
 
@@ -62,7 +86,10 @@ class DeliveryBloc extends Bloc<DeliveryEvent, DeliveryState> {
         emit(const DeliveryState.success(message: 'COD collected'));
         emit(const DeliveryState.idle());
       } catch (e) {
-        emit(DeliveryState.failure(message: e.toString()));
+        final errorMessage = e is DioException && e.error is String
+            ? e.error as String
+            : e.toString();
+        emit(DeliveryState.failure(message: errorMessage));
       }
     });
   }

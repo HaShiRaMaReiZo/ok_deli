@@ -46,13 +46,23 @@ class RiderController extends Controller
     public function locations(Request $request)
     {
         // Get all active riders with their current locations
+        // Only show riders who have sent at least one location update
         $riders = Rider::whereNotNull('current_latitude')
             ->whereNotNull('current_longitude')
             ->where('status', '!=', 'offline')
-            ->with(['user', 'zone'])
+            ->select('id', 'name', 'phone', 'status', 'current_latitude', 'current_longitude', 'last_location_update')
             ->get();
 
-        $locations = $riders->map(function ($rider) {
+        // Get package counts in a single query to avoid N+1 problem
+        $riderIds = $riders->pluck('id')->toArray();
+        $packageCounts = \App\Models\Package::whereIn('current_rider_id', $riderIds)
+            ->whereIn('status', ['assigned_to_rider', 'picked_up', 'on_the_way'])
+            ->groupBy('current_rider_id')
+            ->selectRaw('current_rider_id, count(*) as count')
+            ->pluck('count', 'current_rider_id')
+            ->toArray();
+
+        $locations = $riders->map(function ($rider) use ($packageCounts) {
             return [
                 'rider_id' => $rider->id,
                 'name' => $rider->name,
@@ -61,11 +71,12 @@ class RiderController extends Controller
                 'latitude' => $rider->current_latitude,
                 'longitude' => $rider->current_longitude,
                 'last_location_update' => $rider->last_location_update,
-                'package_count' => \App\Models\Package::where('current_rider_id', $rider->id)
-                    ->whereIn('status', ['assigned_to_rider', 'picked_up', 'on_the_way'])
-                    ->count(),
+                'package_count' => $packageCounts[$rider->id] ?? 0,
             ];
-        });
+        })->filter(function ($rider) {
+            // Only return riders that have actual location data (for map display)
+            return $rider['latitude'] !== null && $rider['longitude'] !== null;
+        })->values();
 
         return response()->json([
             'riders' => $locations,

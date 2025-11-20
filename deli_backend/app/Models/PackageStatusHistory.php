@@ -9,6 +9,8 @@ class PackageStatusHistory extends Model
 {
     public $timestamps = false;
 
+    protected $table = 'package_status_history';
+
     protected $fillable = [
         'package_id',
         'status',

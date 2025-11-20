@@ -38,6 +38,14 @@
                     <i class="fas fa-box mr-3"></i>
                     Packages
                 </a>
+                <a href="{{ route('office.registered_packages_by_merchant') }}" class="flex items-center px-4 py-3 hover:bg-gray-700 {{ request()->routeIs('office.registered_packages_by_merchant') ? 'bg-gray-700 border-l-4 border-blue-500' : '' }}">
+                    <i class="fas fa-store mr-3"></i>
+                    Packages by Merchant
+                </a>
+                <a href="{{ route('office.picked_up_packages') }}" class="flex items-center px-4 py-3 hover:bg-gray-700 {{ request()->routeIs('office.picked_up_packages') ? 'bg-gray-700 border-l-4 border-blue-500' : '' }}">
+                    <i class="fas fa-box-open mr-3"></i>
+                    Picked Up Packages
+                </a>
                 <a href="{{ route('office.riders') }}" class="flex items-center px-4 py-3 hover:bg-gray-700 {{ request()->routeIs('office.riders') ? 'bg-gray-700 border-l-4 border-blue-500' : '' }}">
                     <i class="fas fa-motorcycle mr-3"></i>
                     Riders
@@ -45,6 +53,10 @@
                 <a href="{{ route('office.map') }}" class="flex items-center px-4 py-3 hover:bg-gray-700 {{ request()->routeIs('office.map') ? 'bg-gray-700 border-l-4 border-blue-500' : '' }}">
                     <i class="fas fa-map-marked-alt mr-3"></i>
                     Live Map
+                </a>
+                <a href="{{ route('office.register_user') }}" class="flex items-center px-4 py-3 hover:bg-gray-700 {{ request()->routeIs('office.register_user*') ? 'bg-gray-700 border-l-4 border-blue-500' : '' }}">
+                    <i class="fas fa-user-plus mr-3"></i>
+                    Register User
                 </a>
             </nav>
         </aside>
@@ -94,6 +106,76 @@
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Laravel Echo & Pusher for WebSocket -->
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script>
+        // Initialize Pusher for WebSocket connections
+        const pusherConfig = {
+            key: '{{ env("PUSHER_APP_KEY", "") }}',
+            cluster: '{{ env("PUSHER_APP_CLUSTER", "mt1") }}',
+            encrypted: true,
+            authEndpoint: '/broadcasting/auth',
+            auth: {
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Authorization': 'Bearer {{ $apiToken ?? "" }}'
+                }
+            }
+        };
+        
+        // Only initialize if Pusher key is configured
+        let pusher = null;
+        
+        if (pusherConfig.key && pusherConfig.key !== '') {
+            try {
+                pusher = new Pusher(pusherConfig.key, {
+                    cluster: pusherConfig.cluster,
+                    encrypted: pusherConfig.encrypted,
+                    authEndpoint: pusherConfig.authEndpoint,
+                    auth: pusherConfig.auth
+                });
+                
+                // Connection status logging
+                pusher.connection.bind('connected', () => {
+                    console.log('WebSocket connected');
+                });
+                
+                pusher.connection.bind('error', (err) => {
+                    console.warn('WebSocket connection error:', err);
+                });
+            } catch (e) {
+                console.warn('Failed to initialize Pusher:', e);
+            }
+        } else {
+            console.info('Pusher not configured. WebSocket features disabled. Add PUSHER_APP_KEY to .env to enable.');
+        }
+        
+        // Global WebSocket helper functions
+        window.WebSocketHelper = {
+            connect: function(channelName, eventName, callback) {
+                if (!pusher) {
+                    console.warn('Pusher not configured. WebSocket features disabled.');
+                    return null;
+                }
+                
+                const channel = pusher.subscribe(channelName);
+                channel.bind(eventName, callback);
+                return channel;
+            },
+            
+            disconnect: function(channel) {
+                if (channel && pusher) {
+                    pusher.unsubscribe(channel.name);
+                }
+            },
+            
+            isConnected: function() {
+                return pusher !== null && pusher.connection.state === 'connected';
+            }
+        };
+    </script>
+    
     @stack('scripts')
 </body>
 </html>

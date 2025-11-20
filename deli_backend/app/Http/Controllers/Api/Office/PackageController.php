@@ -8,6 +8,8 @@ use App\Models\PackageStatusHistory;
 use App\Models\RiderAssignment;
 use App\Events\PackageStatusChanged;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class PackageController extends Controller
 {
@@ -53,7 +55,7 @@ class PackageController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:arrived_at_office,assigned_to_rider,return_to_office,cancelled',
+            'status' => 'required|in:arrived_at_office,assigned_to_rider,return_to_office,returned_to_merchant,cancelled',
             'notes' => 'nullable|string',
         ]);
 
@@ -95,9 +97,19 @@ class PackageController extends Controller
         $package = Package::findOrFail($id);
         $rider = \App\Models\Rider::findOrFail($request->rider_id);
 
+        // Determine assignment type based on current status
+        // Delivery assignments: packages that are 'arrived_at_office' (ready to be assigned for delivery)
+        // Pickup assignments: packages that are 'registered' (need to be picked up from merchant)
+        $isDeliveryAssignment = $package->status === 'arrived_at_office';
+        $assignmentType = $isDeliveryAssignment ? 'delivery' : 'pickup';
+        
+        // For delivery assignment from office: set status to 'assigned_to_rider' 
+        // (rider needs to receive package from office, then it becomes 'ready_for_delivery')
+        // For pickup assignment: change status to 'assigned_to_rider' (rider picks up from merchant)
+        $package->status = 'assigned_to_rider';
+        
         // Update package
         $package->current_rider_id = $rider->id;
-        $package->status = 'assigned_to_rider';
         $package->assigned_at = now();
         $package->save();
 
@@ -111,20 +123,27 @@ class PackageController extends Controller
         ]);
 
         // Log status history
+        $statusNote = $isDeliveryAssignment 
+            ? "Assigned to rider {$rider->name} for delivery"
+            : "Assigned to rider {$rider->name} for pickup";
+            
         PackageStatusHistory::create([
             'package_id' => $package->id,
-            'status' => 'assigned_to_rider',
+            'status' => $package->status, // Use current status (picked_up for delivery, assigned_to_rider for pickup)
             'changed_by_user_id' => $request->user()->id,
             'changed_by_type' => 'office',
-            'notes' => "Assigned to rider: {$rider->name}",
+            'notes' => $statusNote,
             'created_at' => now(),
         ]);
 
         // Broadcast status change via WebSocket
-        event(new PackageStatusChanged($package->id, 'assigned_to_rider', $package->merchant_id));
+        event(new PackageStatusChanged($package->id, $package->status, $package->merchant_id));
 
         return response()->json([
-            'message' => 'Package assigned successfully',
+            'message' => $isDeliveryAssignment 
+                ? 'Package assigned for delivery successfully'
+                : 'Package assigned for pickup successfully',
+            'assignment_type' => $assignmentType,
             'package' => $package->load(['merchant', 'currentRider', 'statusHistory']),
         ]);
     }
@@ -139,13 +158,24 @@ class PackageController extends Controller
 
         $rider = \App\Models\Rider::findOrFail($request->rider_id);
         $assigned = [];
+        $deliveryCount = 0;
+        $pickupCount = 0;
 
         foreach ($request->package_ids as $packageId) {
             $package = Package::findOrFail($packageId);
 
+            // Determine assignment type based on current status
+            // Delivery assignments: packages that are 'arrived_at_office' (ready to be assigned for delivery)
+            // Pickup assignments: packages that are 'registered' (need to be picked up from merchant)
+            $isDeliveryAssignment = $package->status === 'arrived_at_office';
+            
+            // For delivery assignment from office: set status to 'assigned_to_rider'
+            // (rider needs to receive package from office, then it becomes 'ready_for_delivery')
+            // For pickup assignment: change status to 'assigned_to_rider' (rider picks up from merchant)
+            $package->status = 'assigned_to_rider';
+            
             // Update package
             $package->current_rider_id = $rider->id;
-            $package->status = 'assigned_to_rider';
             $package->assigned_at = now();
             $package->save();
 
@@ -159,26 +189,171 @@ class PackageController extends Controller
             ]);
 
             // Log status history
+            $statusNote = $isDeliveryAssignment 
+                ? "Bulk assigned to rider {$rider->name} for delivery"
+                : "Bulk assigned to rider {$rider->name} for pickup";
+                
             PackageStatusHistory::create([
                 'package_id' => $package->id,
-                'status' => 'assigned_to_rider',
+                'status' => $package->status,
                 'changed_by_user_id' => $request->user()->id,
                 'changed_by_type' => 'office',
-                'notes' => "Bulk assigned to rider: {$rider->name}",
+                'notes' => $statusNote,
                 'created_at' => now(),
             ]);
 
             // Broadcast status change via WebSocket
-            event(new PackageStatusChanged($package->id, 'assigned_to_rider', $package->merchant_id));
+            event(new PackageStatusChanged($package->id, $package->status, $package->merchant_id));
 
+            if ($isDeliveryAssignment) {
+                $deliveryCount++;
+            } else {
+                $pickupCount++;
+            }
+            
             $assigned[] = $package->id;
         }
 
         return response()->json([
             'message' => 'Packages assigned successfully',
             'assigned_count' => count($assigned),
+            'pickup_count' => $pickupCount,
+            'delivery_count' => $deliveryCount,
             'assigned_ids' => $assigned,
         ]);
+    }
+
+    public function assignPickupByMerchant(Request $request, $merchantId)
+    {
+        try {
+            // Clear any previous output
+            if (ob_get_level()) {
+                ob_clean();
+            }
+
+            $request->validate([
+                'rider_id' => 'required|exists:riders,id',
+            ]);
+
+            $rider = \App\Models\Rider::findOrFail($request->rider_id);
+            $merchant = \App\Models\Merchant::findOrFail($merchantId);
+
+            // Get all registered packages from this merchant
+            $packages = Package::where('merchant_id', $merchantId)
+                ->where('status', 'registered')
+                ->get();
+
+            if ($packages->isEmpty()) {
+                return response()->json([
+                    'message' => 'No registered packages found for this merchant',
+                    'assigned_count' => 0,
+                ], 404)->header('Content-Type', 'application/json');
+            }
+
+            $assigned = [];
+
+            DB::beginTransaction();
+            try {
+                foreach ($packages as $package) {
+                    // Update package - assign for pickup
+                    $package->current_rider_id = $rider->id;
+                    $package->status = 'assigned_to_rider'; // Status for pickup assignment
+                    $package->assigned_at = now();
+                    $package->save();
+
+                    // Create assignment record
+                    RiderAssignment::create([
+                        'package_id' => $package->id,
+                        'rider_id' => $rider->id,
+                        'assigned_by_user_id' => $request->user()->id,
+                        'assigned_at' => now(),
+                        'status' => 'assigned', // Assignment status
+                    ]);
+
+                    // Log status history
+                    PackageStatusHistory::create([
+                        'package_id' => $package->id,
+                        'status' => 'assigned_to_rider',
+                        'changed_by_user_id' => $request->user()->id,
+                        'changed_by_type' => 'office',
+                        'notes' => "Assigned to rider {$rider->name} for pickup from merchant {$merchant->business_name}",
+                        'created_at' => now(),
+                    ]);
+
+                    // Broadcast status change via WebSocket (wrap in try-catch to prevent breaking response)
+                    try {
+                        event(new PackageStatusChanged($package->id, 'assigned_to_rider', $package->merchant_id));
+                    } catch (\Exception $eventException) {
+                        // Log but don't fail the assignment if event fails
+                        Log::warning('Failed to broadcast package status change event', [
+                            'package_id' => $package->id,
+                            'error' => $eventException->getMessage(),
+                        ]);
+                    }
+
+                    $assigned[] = $package->id;
+                }
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
+            // Build response data
+            $responseData = [
+                'message' => 'Rider assigned for pickup from merchant successfully',
+                'merchant' => [
+                    'id' => $merchant->id,
+                    'business_name' => $merchant->business_name,
+                    'business_address' => $merchant->business_address,
+                ],
+                'rider' => [
+                    'id' => $rider->id,
+                    'name' => $rider->name,
+                ],
+                'assigned_count' => count($assigned),
+                'assigned_package_ids' => $assigned,
+            ];
+
+            // Ensure no output before response
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            return response()->json($responseData, 200, [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422)->header('Content-Type', 'application/json');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Rider or merchant not found',
+                'error' => $e->getMessage(),
+            ], 404)->header('Content-Type', 'application/json');
+        } catch (\Exception $e) {
+            // Ensure no output before error response
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            Log::error('Error assigning pickup by merchant', [
+                'merchant_id' => $merchantId,
+                'rider_id' => $request->rider_id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to assign rider for pickup',
+                'error' => $e->getMessage(),
+            ], 500, [
+                'Content-Type' => 'application/json',
+            ]);
+        }
     }
 
     public function arrived(Request $request)
