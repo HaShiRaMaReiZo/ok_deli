@@ -10,6 +10,10 @@ use App\Services\SupabaseStorageService;
 use App\Events\PackageStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
+use PDOException;
 
 class PackageController extends Controller
 {
@@ -19,7 +23,9 @@ class PackageController extends Controller
         
         // Only load necessary relationships - statusHistory is heavy and not needed for list view
         // Only load specific columns to reduce data transfer
+        // Exclude draft packages from regular list
         $packages = Package::where('merchant_id', $merchant->id)
+            ->where('is_draft', false)
             ->with(['currentRider:id,name,phone', 'statusHistory' => function ($query) {
                 // Only get the latest status history entry for each package
                 $query->orderBy('created_at', 'desc')->limit(1);
@@ -33,7 +39,6 @@ class PackageController extends Controller
     public function bulkStore(Request $request)
     {
         try {
-            // Ensure output buffer is clean
             if (ob_get_level()) {
                 ob_end_clean();
             }
@@ -223,7 +228,6 @@ class PackageController extends Controller
                 'image_upload_errors' => $imageUploadErrors, // Include image upload errors
             ], count($createdPackages) > 0 ? 201 : 422)->header('Content-Type', 'application/json');
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Ensure output buffer is clean
             if (ob_get_level()) {
                 ob_end_clean();
             }
@@ -384,5 +388,532 @@ class PackageController extends Controller
             ->get();
 
         return response()->json($history);
+    }
+
+    /**
+     * Save packages as drafts (without tracking codes or status)
+     */
+    public function saveDraft(Request $request)
+    {
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        try {
+            // Normalize empty strings to null for optional fields
+            $packages = $request->packages;
+            
+            if (!is_array($packages) || empty($packages)) {
+                return response()->json([
+                    'message' => 'Validation failed',
+                    'errors' => ['packages' => ['The packages field is required and must be a non-empty array.']],
+                ], 422, ['Content-Type' => 'application/json']);
+            }
+            foreach ($packages as &$package) {
+                if (isset($package['customer_email'])) {
+                    $email = trim($package['customer_email']);
+                    if (empty($email) || strpos($email, '@') === false) {
+                        $package['customer_email'] = null;
+                    }
+                }
+                if (isset($package['package_description']) && empty(trim($package['package_description']))) {
+                    $package['package_description'] = null;
+                }
+            }
+            $request->merge(['packages' => $packages]);
+
+            $request->validate([
+                'packages' => 'required|array|min:1|max:50',
+                'packages.*.customer_name' => 'required|string|max:255',
+                'packages.*.customer_phone' => 'required|string|max:20',
+                'packages.*.customer_email' => 'nullable|email',
+                'packages.*.delivery_address' => 'required|string',
+                'packages.*.delivery_latitude' => 'nullable|numeric',
+                'packages.*.delivery_longitude' => 'nullable|numeric',
+                'packages.*.payment_type' => 'required|in:cod,prepaid',
+                'packages.*.amount' => 'required|numeric|min:0',
+                'packages.*.package_description' => 'nullable|string',
+                'packages.*.package_image' => 'nullable|string', // Base64 encoded image
+            ]);
+
+            $merchant = $request->user()->merchant;
+            $packages = $request->packages;
+            $createdDrafts = [];
+            $errors = [];
+            $imageUploadErrors = [];
+
+            foreach ($packages as $index => $packageData) {
+                try {
+                    // Handle package image (base64 to Supabase)
+                    $packageImageUrl = null;
+                    $imageError = null;
+                    
+                    if (!empty($packageData['package_image'])) {
+                        try {
+                            $base64String = $packageData['package_image'];
+                            
+                            if (strpos($base64String, ',') !== false) {
+                                $base64String = explode(',', $base64String, 2)[1];
+                            }
+                            
+                            $imageData = base64_decode($base64String, true);
+                            
+                            if ($imageData === false) {
+                                $imageError = 'Failed to decode base64 image data';
+                            } else {
+                                try {
+                                    // Generate unique filename for draft (no tracking code yet)
+                                    $filename = 'draft_' . time() . '_' . uniqid() . '_' . $index . '.jpg';
+                                    $path = 'package_images/' . $filename;
+                                    
+                                    $supabaseService = new SupabaseStorageService();
+                                    $supabaseErrorMessage = null;
+                                    $packageImageUrl = $supabaseService->upload($path, $imageData, $supabaseErrorMessage);
+                                    
+                                    if (!$packageImageUrl) {
+                                        $imageError = $supabaseErrorMessage ?? 'Failed to upload image to Supabase';
+                                    }
+                                } catch (\Throwable $uploadEx) {
+                                    $imageError = 'Failed to upload image: ' . $uploadEx->getMessage();
+                                    Log::warning('Draft image upload error', [
+                                        'index' => $index,
+                                        'error' => $uploadEx->getMessage(),
+                                    ]);
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            $imageError = 'Failed to upload image: ' . $e->getMessage();
+                            Log::warning('Draft image upload error', [
+                                'index' => $index,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+
+                    // Create draft package
+                    $packageDataToSave = [
+                        'merchant_id' => $merchant->id,
+                        'customer_name' => $packageData['customer_name'],
+                        'customer_phone' => $packageData['customer_phone'],
+                        'customer_email' => $packageData['customer_email'] ?? null,
+                        'delivery_address' => $packageData['delivery_address'],
+                        'delivery_latitude' => $packageData['delivery_latitude'] ?? null,
+                        'delivery_longitude' => $packageData['delivery_longitude'] ?? null,
+                        'payment_type' => $packageData['payment_type'],
+                        'amount' => $packageData['amount'],
+                        'package_image' => $packageImageUrl,
+                        'package_description' => $packageData['package_description'] ?? null,
+                        'is_draft' => true,
+                        'status' => null,
+                    ];
+                    
+                    $package = Package::create($packageDataToSave);
+
+                    if ($imageError) {
+                        $imageUploadErrors[] = [
+                            'index' => $index,
+                            'customer_name' => $packageData['customer_name'],
+                            'error' => $imageError,
+                        ];
+                    }
+
+                    if ($imageError) {
+                        $imageUploadErrors[] = [
+                            'index' => $index,
+                            'customer_name' => $packageData['customer_name'],
+                            'error' => $imageError,
+                        ];
+                    }
+
+                    $createdDrafts[] = $package;
+                } catch (\Throwable $e) {
+                    Log::error('Error creating draft package', [
+                        'index' => $index,
+                        'error' => $e->getMessage(),
+                        'type' => get_class($e),
+                    ]);
+                    $errors[] = [
+                        'index' => $index,
+                        'customer_name' => $packageData['customer_name'] ?? 'Unknown',
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            // Clean output buffer before sending response
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            
+            // Convert packages to array for JSON response - use toArray() for safe serialization
+            $packagesArray = [];
+            foreach ($createdDrafts as $pkg) {
+                try {
+                    // Use toArray() which handles all serialization safely
+                    $packageArray = $pkg->toArray();
+                    
+                    // Ensure proper types and handle nulls
+                    $packagesArray[] = [
+                        'id' => (int) $packageArray['id'],
+                        'merchant_id' => (int) $packageArray['merchant_id'],
+                        'customer_name' => (string) $packageArray['customer_name'],
+                        'customer_phone' => (string) $packageArray['customer_phone'],
+                        'customer_email' => $packageArray['customer_email'] ?? null,
+                        'delivery_address' => (string) $packageArray['delivery_address'],
+                        'delivery_latitude' => isset($packageArray['delivery_latitude']) ? (float) $packageArray['delivery_latitude'] : null,
+                        'delivery_longitude' => isset($packageArray['delivery_longitude']) ? (float) $packageArray['delivery_longitude'] : null,
+                        'payment_type' => (string) $packageArray['payment_type'],
+                        'amount' => (float) $packageArray['amount'],
+                        'package_image' => $packageArray['package_image'] ?? null,
+                        'package_description' => $packageArray['package_description'] ?? null,
+                        'tracking_code' => $packageArray['tracking_code'] ?? null,
+                        'status' => $packageArray['status'] ?? null, // May be null for drafts
+                        'is_draft' => isset($packageArray['is_draft']) ? (bool) $packageArray['is_draft'] : false,
+                        'created_at' => $packageArray['created_at'] ?? now()->toDateTimeString(),
+                        'updated_at' => $packageArray['updated_at'] ?? now()->toDateTimeString(),
+                    ];
+                } catch (\Exception $serializeEx) {
+                    Log::warning('Error serializing package', [
+                        'package_id' => $pkg->id ?? 'unknown',
+                        'error' => $serializeEx->getMessage(),
+                    ]);
+                }
+            }
+            
+            $responseData = [
+                'message' => count($createdDrafts) . ' draft package(s) saved successfully',
+                'created_count' => count($createdDrafts),
+                'failed_count' => count($errors),
+                'packages' => $packagesArray,
+                'errors' => $errors,
+                'image_upload_errors' => $imageUploadErrors,
+            ];
+            
+            $statusCode = count($createdDrafts) > 0 ? 201 : 422;
+            
+            return response()->json($responseData, $statusCode, [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422)->header('Content-Type', 'application/json');
+        } catch (QueryException $e) {
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            Log::error('Draft package save database error', [
+                'error' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'code' => $e->getCode(),
+            ]);
+            
+            // Check if it's a constraint violation (likely tracking_code NOT NULL)
+            $errorMessage = $e->getMessage();
+            if (strpos($errorMessage, 'tracking_code') !== false || 
+                strpos($errorMessage, 'null value') !== false ||
+                strpos($errorMessage, 'NOT NULL') !== false ||
+                $e->getCode() == '23502') { // PostgreSQL NOT NULL violation code
+                return response()->json([
+                    'message' => 'Database error: Please run migrations. The tracking_code column needs to be nullable for drafts.',
+                    'error' => 'Database constraint violation. Migrations may not have been run.',
+                    'details' => 'Error: ' . $errorMessage,
+                ], 500, [
+                    'Content-Type' => 'application/json',
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                ]);
+            }
+            
+            return response()->json([
+                'message' => 'Database error occurred while saving drafts',
+                'error' => $errorMessage,
+            ], 500, [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ]);
+        } catch (PDOException $e) {
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            Log::error('Draft package save PDO error', [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+            ]);
+            
+            $errorMessage = $e->getMessage();
+            if (strpos($errorMessage, 'tracking_code') !== false || 
+                strpos($errorMessage, 'null value') !== false ||
+                strpos($errorMessage, 'NOT NULL') !== false) {
+                return response()->json([
+                    'message' => 'Database error: Please run migrations. The tracking_code column needs to be nullable for drafts.',
+                    'error' => 'Database constraint violation. Migrations may not have been run.',
+                    'details' => 'Error: ' . $errorMessage,
+                ], 500, [
+                    'Content-Type' => 'application/json',
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                ]);
+            }
+            
+            return response()->json([
+                'message' => 'Database error occurred while saving drafts',
+                'error' => $errorMessage,
+            ], 500, [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ]);
+        } catch (\Throwable $e) {
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            Log::error('Draft package save error', [
+                'error' => $e->getMessage(),
+                'type' => get_class($e),
+            ]);
+            
+            return response()->json([
+                'message' => 'An error occurred while saving drafts',
+                'error' => $e->getMessage(),
+            ], 500, [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ]);
+        }
+    }
+
+    /**
+     * Get all draft packages for the merchant
+     */
+    public function getDrafts(Request $request)
+    {
+        try {
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            $merchant = $request->user()->merchant;
+            
+            $drafts = Package::where('merchant_id', $merchant->id)
+                ->where('is_draft', true)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // Manually serialize packages to handle null status
+            $draftsArray = [];
+            foreach ($drafts as $pkg) {
+                try {
+                    $packageArray = $pkg->toArray();
+                    $draftsArray[] = [
+                        'id' => (int) $packageArray['id'],
+                        'merchant_id' => (int) $packageArray['merchant_id'],
+                        'customer_name' => (string) $packageArray['customer_name'],
+                        'customer_phone' => (string) $packageArray['customer_phone'],
+                        'customer_email' => $packageArray['customer_email'] ?? null,
+                        'delivery_address' => (string) $packageArray['delivery_address'],
+                        'delivery_latitude' => isset($packageArray['delivery_latitude']) ? (float) $packageArray['delivery_latitude'] : null,
+                        'delivery_longitude' => isset($packageArray['delivery_longitude']) ? (float) $packageArray['delivery_longitude'] : null,
+                        'payment_type' => (string) $packageArray['payment_type'],
+                        'amount' => (float) $packageArray['amount'],
+                        'package_image' => $packageArray['package_image'] ?? null,
+                        'package_description' => $packageArray['package_description'] ?? null,
+                        'tracking_code' => $packageArray['tracking_code'] ?? null,
+                        'status' => $packageArray['status'] ?? null,
+                        'is_draft' => isset($packageArray['is_draft']) ? (bool) $packageArray['is_draft'] : false,
+                        'created_at' => $packageArray['created_at'] ?? now()->toDateTimeString(),
+                        'updated_at' => $packageArray['updated_at'] ?? now()->toDateTimeString(),
+                    ];
+                } catch (\Exception $e) {
+                    Log::warning('Error serializing draft package', [
+                        'package_id' => $pkg->id ?? 'unknown',
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return response()->json($draftsArray, 200, [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ]);
+        } catch (\Throwable $e) {
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            Log::error('Error getting drafts', [
+                'error' => $e->getMessage(),
+                'type' => get_class($e),
+            ]);
+            
+            return response()->json([
+                'message' => 'An error occurred while fetching drafts',
+                'error' => $e->getMessage(),
+            ], 500, [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ]);
+        }
+    }
+
+    /**
+     * Submit draft packages to the system (convert to regular packages)
+     */
+    public function submitDrafts(Request $request)
+    {
+        try {
+            $request->validate([
+                'package_ids' => 'required|array|min:1',
+                'package_ids.*' => 'required|integer|exists:packages,id',
+            ]);
+
+            $merchant = $request->user()->merchant;
+            $packageIds = $request->package_ids;
+            
+            // Get draft packages that belong to this merchant
+            $draftPackages = Package::where('merchant_id', $merchant->id)
+                ->where('is_draft', true)
+                ->whereIn('id', $packageIds)
+                ->get();
+
+            if ($draftPackages->isEmpty()) {
+                return response()->json([
+                    'message' => 'No valid draft packages found',
+                ], 404)->header('Content-Type', 'application/json');
+            }
+
+            $submittedPackages = [];
+            $errors = [];
+
+            foreach ($draftPackages as $package) {
+                try {
+                    // Generate tracking code
+                    $trackingCode = TrackingCodeService::generate();
+
+                    // Update package: set tracking code, status, and is_draft = false
+                    $package->update([
+                        'tracking_code' => $trackingCode,
+                        'status' => 'registered',
+                        'is_draft' => false,
+                    ]);
+
+                    // Create initial status history entry
+                    PackageStatusHistory::create([
+                        'package_id' => $package->id,
+                        'status' => 'registered',
+                        'changed_by_id' => $merchant->user_id,
+                        'changed_by_type' => 'merchant',
+                        'created_at' => now(),
+                    ]);
+
+                    // Broadcast status change via WebSocket
+                    event(new PackageStatusChanged($package->id, 'registered', $package->merchant_id));
+
+                    $submittedPackages[] = $package;
+                } catch (\Exception $e) {
+                    $errors[] = [
+                        'package_id' => $package->id,
+                        'customer_name' => $package->customer_name,
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            return response()->json([
+                'message' => count($submittedPackages) . ' package(s) submitted successfully',
+                'submitted_count' => count($submittedPackages),
+                'failed_count' => count($errors),
+                'packages' => $submittedPackages,
+                'errors' => $errors,
+            ], count($submittedPackages) > 0 ? 200 : 422)->header('Content-Type', 'application/json');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422)->header('Content-Type', 'application/json');
+        } catch (\Exception $e) {
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            Log::error('Draft submission error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json([
+                'message' => 'An error occurred while submitting drafts',
+                'error' => $e->getMessage(),
+            ], 500)->header('Content-Type', 'application/json');
+        }
+    }
+
+    /**
+     * Delete a draft package
+     */
+    public function deleteDraft(Request $request, $id)
+    {
+        try {
+            $merchant = $request->user()->merchant;
+            
+            $package = Package::where('merchant_id', $merchant->id)
+                ->where('is_draft', true)
+                ->findOrFail($id);
+            
+            // Delete associated image from Supabase if exists
+            if ($package->package_image) {
+                try {
+                    $supabaseService = new SupabaseStorageService();
+                    $path = $supabaseService->extractPathFromUrl($package->package_image);
+                    if ($path) {
+                        $supabaseService->delete($path);
+                    }
+                } catch (\Exception $e) {
+                    // Log but don't fail if image deletion fails
+                    Log::warning('Failed to delete draft package image', [
+                        'package_id' => $package->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            
+            $package->delete();
+            
+            return response()->json([
+                'message' => 'Draft package deleted successfully',
+            ], 200, [
+                'Content-Type' => 'application/json',
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Draft package not found',
+                'error' => 'The specified draft package does not exist or does not belong to you.',
+            ], 404, [
+                'Content-Type' => 'application/json',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error deleting draft package', [
+                'package_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json([
+                'message' => 'An error occurred while deleting the draft',
+                'error' => $e->getMessage(),
+            ], 500, [
+                'Content-Type' => 'application/json',
+            ]);
+        }
     }
 }

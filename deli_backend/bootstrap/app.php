@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Support\Facades\Log;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -52,17 +53,41 @@ return Application::configure(basePath: dirname(__DIR__))
         // Handle unauthenticated API requests with JSON response instead of redirect
         // This works even when API is accessed from a web browser
         $exceptions->respond(function ($request, Throwable $e) {
+            // Ensure $request is actually a Request object
+            if (!($request instanceof \Illuminate\Http\Request)) {
+                return null; // Let Laravel handle it
+            }
+            
             // Check if it's an API route (even if accessed from browser)
             if ($e instanceof AuthenticationException && $request->is('api/*')) {
                 return response()->json([
                     'message' => 'Unauthenticated.',
                     'error' => 'Authentication required'
-                ], 401);
+                ], 401)->header('Content-Type', 'application/json');
             }
+            
+            // Handle ALL exceptions for API routes to return JSON
+            if ($request->is('api/*')) {
+                Log::error('API Exception', [
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                
+                return response()->json([
+                    'message' => 'An error occurred',
+                    'error' => $e->getMessage(),
+                    'type' => get_class($e),
+                ], 500)->header('Content-Type', 'application/json');
+            }
+            
+            return null; // Let Laravel handle non-API routes
         });
         
         // Also handle other exceptions for API routes to return JSON
         $exceptions->shouldRenderJsonWhen(function ($request, Throwable $e) {
+            if (!($request instanceof \Illuminate\Http\Request)) {
+                return false;
+            }
             return $request->is('api/*') || $request->expectsJson();
         });
     })->create();
