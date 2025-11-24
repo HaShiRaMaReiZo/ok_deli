@@ -4,7 +4,9 @@ import '../../models/package_model.dart';
 import '../../repositories/package_repository.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
+import '../../core/utils/date_utils.dart' as myanmar_date;
 import '../../widgets/image_preview_screen.dart';
+import 'edit_draft_screen.dart';
 
 class DraftDateDetailScreen extends StatefulWidget {
   final DateTime date;
@@ -28,11 +30,56 @@ class _DraftDateDetailScreenState extends State<DraftDateDetailScreen> {
   late List<PackageModel> _packages;
   bool _isDeleting = false;
   bool _isSubmitting = false;
+  bool _packagesWereSubmitted = false;
 
   @override
   void initState() {
     super.initState();
     _packages = List.from(widget.packages);
+  }
+
+  Future<void> _loadDrafts() async {
+    try {
+      final drafts = await _packageRepository.getDrafts();
+      final filteredDrafts = drafts.where((d) {
+        // Use Myanmar timezone for comparison
+        final draftDate = myanmar_date.MyanmarDateUtils.getDateKey(d.createdAt);
+        final widgetDate = DateTime(
+          widget.date.year,
+          widget.date.month,
+          widget.date.day,
+        );
+        return draftDate == widgetDate;
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _packages = filteredDrafts;
+        });
+
+        // If no drafts found for this date and packages were submitted, navigate back
+        // This means all packages were submitted successfully
+        if (filteredDrafts.isEmpty && _packagesWereSubmitted) {
+          // Navigate back to draft list
+          Navigator.of(context).pop(true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        // Only show error if it's not an empty list scenario
+        if (!e.toString().contains('No valid draft packages found')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error loading drafts: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else {
+          // If no drafts found, navigate back to draft list
+          Navigator.of(context).pop(true);
+        }
+      }
+    }
   }
 
   Future<void> _deleteDraft(int packageId) async {
@@ -134,8 +181,13 @@ class _DraftDateDetailScreenState extends State<DraftDateDetailScreen> {
       final response = await _packageRepository.submitDrafts(packageIds);
 
       if (mounted) {
+        // Mark that packages were submitted before clearing
+        _packagesWereSubmitted = true;
+
         setState(() {
           _isSubmitting = false;
+          // Clear packages list immediately since they're no longer drafts
+          _packages = [];
         });
 
         showDialog(
@@ -173,7 +225,7 @@ class _DraftDateDetailScreenState extends State<DraftDateDetailScreen> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(); // Close dialog
                   Navigator.of(context).pop(true); // Go back to draft list
                 },
                 child: const Text('OK'),
@@ -199,7 +251,8 @@ class _DraftDateDetailScreenState extends State<DraftDateDetailScreen> {
   }
 
   String _formatDate(DateTime date) {
-    final now = DateTime.now();
+    // date is already in Myanmar timezone from getDateKey
+    final now = myanmar_date.MyanmarDateUtils.getMyanmarNow();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final dateOnly = DateTime(date.year, date.month, date.day);
@@ -213,8 +266,8 @@ class _DraftDateDetailScreenState extends State<DraftDateDetailScreen> {
     }
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  String _formatDateTime(DateTime utcDateTime) {
+    return myanmar_date.MyanmarDateUtils.formatDateTime(utcDateTime);
   }
 
   @override
@@ -319,27 +372,6 @@ class _DraftDateDetailScreenState extends State<DraftDateDetailScreen> {
                                   ),
                                 ],
                               ),
-                              // Customer Email (if exists)
-                              if (package.customerEmail != null &&
-                                  package.customerEmail!.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.email,
-                                      size: 18,
-                                      color: AppTheme.darkBlue,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        package.customerEmail!,
-                                        style: const TextStyle(fontSize: 14),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
                               const SizedBox(height: 8),
                               // Delivery Address
                               Row(
@@ -410,7 +442,7 @@ class _DraftDateDetailScreenState extends State<DraftDateDetailScreen> {
                                 ),
                               ],
                               const SizedBox(height: 8),
-                              // Created At and Delete Button
+                              // Created At and Action Buttons
                               Row(
                                 children: [
                                   const Icon(
@@ -427,6 +459,31 @@ class _DraftDateDetailScreenState extends State<DraftDateDetailScreen> {
                                     ),
                                   ),
                                   const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: AppTheme.darkBlue,
+                                      size: 20,
+                                    ),
+                                    onPressed: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              EditDraftScreen(package: package),
+                                        ),
+                                      );
+
+                                      if (result == true) {
+                                        // Reload drafts to get updated data
+                                        _loadDrafts();
+                                      }
+                                    },
+                                    tooltip: 'Edit',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                  const SizedBox(width: 8),
                                   IconButton(
                                     icon: const Icon(
                                       Icons.delete,

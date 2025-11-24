@@ -54,16 +54,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
 
-    final isAuthenticated = await _repository.isAuthenticated();
-    if (isAuthenticated) {
+    // Check if token exists first
+    final token = await _repository.getToken();
+    if (token == null || token.isEmpty) {
+      emit(AuthUnauthenticated());
+      return;
+    }
+
+    // Token exists, verify it's still valid
+    try {
       final user = await _repository.getCurrentUser();
       if (user != null && user.role == 'merchant') {
         emit(AuthAuthenticated(user));
       } else {
+        // User is not a merchant or user data is invalid
         await _repository.logout();
         emit(AuthUnauthenticated());
       }
-    } else {
+    } catch (e) {
+      // Token is invalid or expired, or network error
+      if (kDebugMode) {
+        print('AuthBloc: Token verification failed: $e');
+      }
+      await _repository.logout();
       emit(AuthUnauthenticated());
     }
   }

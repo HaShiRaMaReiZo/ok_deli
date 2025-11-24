@@ -16,6 +16,12 @@ class ApiEndpoints {
   static const String merchantDrafts = '/api/merchant/packages/draft';
   static const String merchantDraftsSubmit =
       '/api/merchant/packages/draft/submit';
+  static String merchantDraftUpdate(int id) =>
+      '/api/merchant/packages/draft/$id';
   static String merchantDraftDelete(int id) =>
       '/api/merchant/packages/draft/$id';
+
+  // Tracking
+  static String merchantPackageLiveLocation(int id) =>
+      '/api/merchant/packages/$id/live-location';
 }

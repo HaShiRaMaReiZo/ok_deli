@@ -13,11 +13,17 @@ class ApiClient {
       try {
         final prefs = await SharedPreferences.getInstance();
         const tokenKey = 'auth_token';
-        return prefs.getString(tokenKey);
+        final token = prefs.getString(tokenKey);
+        if (kDebugMode && token != null) {
+          print('ApiClient: Token found in SharedPreferences');
+        }
+        return token;
       } catch (e) {
         // If SharedPreferences is not available yet, return null
         // This can happen during app initialization
-        print('ApiClient: SharedPreferences not available yet: $e');
+        if (kDebugMode) {
+          print('ApiClient: SharedPreferences not available yet: $e');
+        }
         return null;
       }
     }

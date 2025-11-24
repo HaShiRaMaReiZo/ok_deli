@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../l10n/app_localizations.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/auth/auth_event.dart';
 import '../../bloc/auth/auth_state.dart';
@@ -70,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'OK Delivery',
+                        AppLocalizations.of(context)!.okDelivery,
                         style: Theme.of(context).textTheme.displayMedium
                             ?.copyWith(
                               color: AppTheme.darkBlue,
@@ -80,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Merchant Portal',
+                        AppLocalizations.of(context)!.merchantPortal,
                         style: Theme.of(
                           context,
                         ).textTheme.bodyLarge?.copyWith(color: AppTheme.black),
@@ -93,17 +94,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          hintText: 'Enter your email',
-                          prefixIcon: Icon(Icons.email_outlined),
+                        decoration: InputDecoration(
+                          labelText: AppLocalizations.of(context)!.email,
+                          hintText: AppLocalizations.of(context)!.enterEmail,
+                          prefixIcon: const Icon(Icons.email_outlined),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
+                            return AppLocalizations.of(
+                              context,
+                            )!.pleaseEnterYourEmail;
                           }
                           if (!value.contains('@')) {
-                            return 'Please enter a valid email';
+                            return AppLocalizations.of(
+                              context,
+                            )!.pleaseEnterValidEmail;
                           }
                           return null;
                         },
@@ -117,8 +122,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => _handleLogin(),
                         decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'Enter your password',
+                          labelText: AppLocalizations.of(context)!.password,
+                          hintText: AppLocalizations.of(context)!.enterPassword,
                           prefixIcon: const Icon(Icons.lock_outlined),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -135,10 +140,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
+                            return AppLocalizations.of(
+                              context,
+                            )!.pleaseEnterYourPassword;
                           }
                           if (value.length < 6) {
-                            return 'Password must be at least 6 characters';
+                            return AppLocalizations.of(
+                              context,
+                            )!.passwordMustBeAtLeast6Characters;
                           }
                           return null;
                         },
@@ -159,13 +168,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               )
-                            : const Text('Login'),
+                            : Text(AppLocalizations.of(context)!.login),
                       ),
                       const SizedBox(height: 16),
 
                       // Help Text
                       Text(
-                        'Contact support if you need help accessing your account',
+                        AppLocalizations.of(context)!.contactSupportHelp,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[600],
                         ),

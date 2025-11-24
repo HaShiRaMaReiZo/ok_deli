@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/package_model.dart';
@@ -112,20 +113,72 @@ class PackageRepository {
     try {
       final response = await _client.get(ApiEndpoints.merchantDrafts);
 
-      return (response.data as List<dynamic>)
+      // Handle empty list or null response
+      if (response.data == null) {
+        return [];
+      }
+
+      // Check if response.data is a List
+      if (response.data is! List) {
+        // If it's a Map, check for a 'data' key or 'packages' key
+        if (response.data is Map) {
+          final data = response.data as Map<String, dynamic>;
+          if (data.containsKey('data') && data['data'] is List) {
+            final packagesList = data['data'] as List<dynamic>;
+            if (packagesList.isEmpty) {
+              return [];
+            }
+            return packagesList
+                .map((p) => PackageModel.fromJson(p as Map<String, dynamic>))
+                .toList();
+          } else if (data.containsKey('packages') && data['packages'] is List) {
+            final packagesList = data['packages'] as List<dynamic>;
+            if (packagesList.isEmpty) {
+              return [];
+            }
+            return packagesList
+                .map((p) => PackageModel.fromJson(p as Map<String, dynamic>))
+                .toList();
+          } else if (data.containsKey('message') &&
+              data['message'].toString().contains('No valid draft packages')) {
+            // Backend returned a message indicating no drafts
+            return [];
+          }
+        }
+        // If not a list and not a recognized map structure, return empty
+        return [];
+      }
+
+      final packagesList = response.data as List<dynamic>;
+      if (packagesList.isEmpty) {
+        return [];
+      }
+
+      return packagesList
           .map((p) => PackageModel.fromJson(p as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
       if (e.response != null) {
-        final errorMsg =
+        // Check if it's a "no drafts" message - return empty list instead of error
+        final errorMsg = e.response?.data?['message']?.toString() ?? '';
+        if (errorMsg.contains('No valid draft packages') ||
+            errorMsg.contains('No draft packages')) {
+          return [];
+        }
+
+        final finalErrorMsg =
             e.response?.data?['message'] ??
             e.response?.data?['error'] ??
             'Failed to get drafts';
-        throw Exception(errorMsg);
+        throw Exception(finalErrorMsg);
       } else {
         throw Exception(e.message ?? 'Network error occurred');
       }
     } catch (e) {
+      // If it's a type error about "No valid draft packages", return empty list
+      if (e.toString().contains('No valid draft packages')) {
+        return [];
+      }
       rethrow;
     }
   }
@@ -153,6 +206,44 @@ class PackageRepository {
     }
   }
 
+  Future<PackageModel> updateDraft(
+    int packageId,
+    CreatePackageModel package,
+  ) async {
+    try {
+      final packageData = package.toJson();
+
+      // Handle image update: if packageImage is empty string, include it to delete
+      // If it's null, don't include it (keep existing)
+      // If it has value, it's already included in toJson()
+      if (package.packageImage != null) {
+        // Include it even if empty (to delete) or if it has value (to update)
+        packageData['package_image'] = package.packageImage;
+      }
+
+      final response = await _client.put(
+        ApiEndpoints.merchantDraftUpdate(packageId),
+        data: packageData,
+      );
+
+      return PackageModel.fromJson(
+        response.data['package'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final errorMsg =
+            e.response?.data?['message'] ??
+            e.response?.data?['error'] ??
+            'Failed to update draft';
+        throw Exception(errorMsg);
+      } else {
+        throw Exception(e.message ?? 'Network error occurred');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> deleteDraft(int packageId) async {
     try {
       await _client.delete(ApiEndpoints.merchantDraftDelete(packageId));
@@ -169,6 +260,170 @@ class PackageRepository {
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<List<PackageModel>> getPackages({int page = 1}) async {
+    try {
+      final response = await _client.get(
+        ApiEndpoints.merchantPackages,
+        queryParameters: {'page': page},
+      );
+
+      // Handle paginated Laravel response
+      List<dynamic> packagesData;
+      if (response.data is Map<String, dynamic>) {
+        final dataMap = response.data as Map<String, dynamic>;
+        // Laravel pagination returns data in 'data' key
+        if (dataMap.containsKey('data') && dataMap['data'] is List) {
+          packagesData = dataMap['data'] as List<dynamic>;
+        } else if (dataMap.containsKey('packages') &&
+            dataMap['packages'] is List) {
+          packagesData = dataMap['packages'] as List<dynamic>;
+        } else {
+          packagesData = [];
+        }
+      } else if (response.data is List) {
+        packagesData = response.data as List<dynamic>;
+      } else {
+        packagesData = [];
+      }
+
+      if (packagesData.isEmpty) {
+        return [];
+      }
+
+      return packagesData.map((json) {
+        try {
+          return PackageModel.fromJson(json as Map<String, dynamic>);
+        } catch (e) {
+          debugPrint('Error parsing package: $e');
+          debugPrint('Package data: $json');
+          rethrow;
+        }
+      }).toList();
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final errorMsg =
+            e.response?.data?['message'] ??
+            e.response?.data?['error'] ??
+            'Failed to fetch packages';
+        throw Exception(errorMsg);
+      } else {
+        throw Exception(e.message ?? 'Network error occurred');
+      }
+    } catch (e) {
+      debugPrint('Error in getPackages: $e');
+      rethrow;
+    }
+  }
+
+  Future<LiveLocationResponse> getLiveLocation(int packageId) async {
+    try {
+      final response = await _client.get(
+        ApiEndpoints.merchantPackageLiveLocation(packageId),
+      );
+
+      return LiveLocationResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final errorMsg =
+            e.response?.data?['message'] ??
+            e.response?.data?['error'] ??
+            'Failed to fetch live location';
+        throw Exception(errorMsg);
+      } else {
+        throw Exception(e.message ?? 'Network error occurred');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+}
+
+class LiveLocationResponse {
+  final RiderLocation? rider;
+  final PackageLocationInfo package;
+  final bool isLive;
+  final String? message;
+
+  LiveLocationResponse({
+    this.rider,
+    required this.package,
+    required this.isLive,
+    this.message,
+  });
+
+  factory LiveLocationResponse.fromJson(Map<String, dynamic> json) {
+    return LiveLocationResponse(
+      rider: json['rider'] != null
+          ? RiderLocation.fromJson(json['rider'] as Map<String, dynamic>)
+          : null,
+      package: PackageLocationInfo.fromJson(
+        json['package'] as Map<String, dynamic>,
+      ),
+      isLive: json['is_live'] as bool? ?? false,
+      message: json['message'] as String?,
+    );
+  }
+}
+
+class RiderLocation {
+  final int id;
+  final String name;
+  final double latitude;
+  final double longitude;
+  final DateTime? lastUpdate;
+
+  RiderLocation({
+    required this.id,
+    required this.name,
+    required this.latitude,
+    required this.longitude,
+    this.lastUpdate,
+  });
+
+  static double _coordinateFromJson(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  factory RiderLocation.fromJson(Map<String, dynamic> json) {
+    return RiderLocation(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      latitude: _coordinateFromJson(json['latitude']),
+      longitude: _coordinateFromJson(json['longitude']),
+      lastUpdate: json['last_update'] != null
+          ? DateTime.parse(json['last_update'] as String).toUtc()
+          : null,
+    );
+  }
+}
+
+class PackageLocationInfo {
+  final int id;
+  final String? trackingCode;
+  final String status;
+  final String deliveryAddress;
+
+  PackageLocationInfo({
+    required this.id,
+    this.trackingCode,
+    required this.status,
+    required this.deliveryAddress,
+  });
+
+  factory PackageLocationInfo.fromJson(Map<String, dynamic> json) {
+    return PackageLocationInfo(
+      id: json['id'] as int,
+      trackingCode: json['tracking_code'] as String?,
+      status: json['status'] as String,
+      deliveryAddress: json['delivery_address'] as String,
+    );
   }
 }
 

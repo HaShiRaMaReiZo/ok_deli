@@ -1,20 +1,163 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/user_model.dart';
+import '../../models/package_model.dart';
+import '../../repositories/package_repository.dart';
+import '../../core/api/api_client.dart';
+import '../../core/api/api_endpoints.dart';
+import '../../core/utils/date_utils.dart' as myanmar_date;
 import '../register_package/register_package_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final UserModel user;
 
   const HomeScreen({super.key, required this.user});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _packageRepository = PackageRepository(
+    ApiClient.create(baseUrl: ApiEndpoints.baseUrl),
+  );
+
+  int _registeredThisMonth = 0;
+  int _pendingThisMonth = 0;
+  int _deliveredThisMonth = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    try {
+      // Load all packages (multiple pages if needed)
+      final allPackages = <PackageModel>[];
+      int currentPage = 1;
+      bool hasMore = true;
+
+      while (hasMore) {
+        final packages = await _packageRepository.getPackages(
+          page: currentPage,
+        );
+        if (packages.isEmpty) {
+          hasMore = false;
+        } else {
+          allPackages.addAll(packages);
+          // If we got less than 20 packages, we've reached the end
+          if (packages.length < 20) {
+            hasMore = false;
+          } else {
+            currentPage++;
+          }
+        }
+      }
+
+      final now = myanmar_date.MyanmarDateUtils.getMyanmarNow();
+      final currentMonth = DateTime(now.year, now.month, 1);
+      final nextMonth = DateTime(now.year, now.month + 1, 1);
+
+      int registeredThisMonth = 0;
+      int pendingThisMonth = 0;
+      int deliveredThisMonth = 0;
+
+      for (final package in allPackages) {
+        // Count registered this month (using registered_at)
+        if (package.registeredAt != null) {
+          final registeredDate = myanmar_date.MyanmarDateUtils.toMyanmarTime(
+            package.registeredAt!,
+          );
+          if (registeredDate.isAfter(
+                currentMonth.subtract(const Duration(days: 1)),
+              ) &&
+              registeredDate.isBefore(nextMonth)) {
+            registeredThisMonth++;
+          }
+        }
+
+        // Count pending this month (packages not delivered/cancelled/returned
+        // that were registered or updated in current month)
+        if (package.status != null &&
+            package.status != 'delivered' &&
+            package.status != 'cancelled' &&
+            package.status != 'returned_to_merchant') {
+          // Check if package was registered or updated in current month
+          final registeredDate = package.registeredAt != null
+              ? myanmar_date.MyanmarDateUtils.toMyanmarTime(
+                  package.registeredAt!,
+                )
+              : null;
+          final updatedDate = myanmar_date.MyanmarDateUtils.toMyanmarTime(
+            package.updatedAt,
+          );
+
+          final isInCurrentMonth =
+              (registeredDate != null &&
+                  registeredDate.isAfter(
+                    currentMonth.subtract(const Duration(days: 1)),
+                  ) &&
+                  registeredDate.isBefore(nextMonth)) ||
+              (updatedDate.isAfter(
+                    currentMonth.subtract(const Duration(days: 1)),
+                  ) &&
+                  updatedDate.isBefore(nextMonth));
+
+          if (isInCurrentMonth) {
+            pendingThisMonth++;
+          }
+        }
+
+        // Count delivered this month (packages with status 'delivered'
+        // that were updated in current month)
+        if (package.status == 'delivered') {
+          final updatedDate = myanmar_date.MyanmarDateUtils.toMyanmarTime(
+            package.updatedAt,
+          );
+          if (updatedDate.isAfter(
+                currentMonth.subtract(const Duration(days: 1)),
+              ) &&
+              updatedDate.isBefore(nextMonth)) {
+            deliveredThisMonth++;
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _registeredThisMonth = registeredThisMonth;
+          _pendingThisMonth = pendingThisMonth;
+          _deliveredThisMonth = deliveredThisMonth;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.lightBeige,
       appBar: AppBar(
-        title: const Text('Home'),
+        title: Text(AppLocalizations.of(context)!.home),
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadDashboardData,
+            tooltip: AppLocalizations.of(context)!.refresh,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -31,8 +174,8 @@ class HomeScreen extends StatelessWidget {
                 Expanded(
                   child: _buildStatBox(
                     context: context,
-                    title: 'Registered Today',
-                    count: '0',
+                    title: AppLocalizations.of(context)!.registered,
+                    count: _isLoading ? '...' : _registeredThisMonth.toString(),
                     icon: Icons.add_circle_outline,
                     color: AppTheme.primaryBlue,
                   ),
@@ -41,8 +184,8 @@ class HomeScreen extends StatelessWidget {
                 Expanded(
                   child: _buildStatBox(
                     context: context,
-                    title: 'Pending',
-                    count: '0',
+                    title: AppLocalizations.of(context)!.pending,
+                    count: _isLoading ? '...' : _pendingThisMonth.toString(),
                     icon: Icons.pending_outlined,
                     color: Colors.orange,
                   ),
@@ -51,8 +194,8 @@ class HomeScreen extends StatelessWidget {
                 Expanded(
                   child: _buildStatBox(
                     context: context,
-                    title: 'Delivered',
-                    count: '0',
+                    title: AppLocalizations.of(context)!.delivered,
+                    count: _isLoading ? '...' : _deliveredThisMonth.toString(),
                     icon: Icons.check_circle_outline,
                     color: Colors.green,
                   ),
@@ -102,7 +245,7 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  user.merchant?.businessName ?? user.name,
+                  widget.user.merchant?.businessName ?? widget.user.name,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.black,
@@ -110,7 +253,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  user.merchant?.businessEmail ?? user.email,
+                  widget.user.merchant?.businessEmail ?? widget.user.email,
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
@@ -133,6 +276,7 @@ class HomeScreen extends StatelessWidget {
     required Color color,
   }) {
     return Container(
+      height: 130, // Fixed height to ensure all cards are same size
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -147,25 +291,29 @@ class HomeScreen extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [Icon(icon, color: color, size: 24)],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            count,
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.black,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+          Icon(icon, color: color, size: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                count,
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ],
       ),
@@ -218,7 +366,7 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Register Package',
+                    AppLocalizations.of(context)!.registerPackage,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -226,7 +374,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Create a new delivery package',
+                    AppLocalizations.of(context)!.createNewDeliveryPackage,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.white.withOpacity(0.9),
                     ),

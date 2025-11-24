@@ -1,0 +1,445 @@
+{
+  "@@locale": "en",
+  "appTitle": "OK Delivery - Merchant",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "home": "Home",
+  "@home": {
+    "description": "Home navigation label"
+  },
+  "draft": "Draft",
+  "@draft": {
+    "description": "Draft navigation label"
+  },
+  "track": "Track",
+  "@track": {
+    "description": "Track navigation label"
+  },
+  "profile": "Profile",
+  "@profile": {
+    "description": "Profile navigation label"
+  },
+  "login": "Login",
+  "@login": {
+    "description": "Login button text"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "Email field label"
+  },
+  "password": "Password",
+  "@password": {
+    "description": "Password field label"
+  },
+  "enterEmail": "Enter your email",
+  "@enterEmail": {
+    "description": "Email field hint"
+  },
+  "enterPassword": "Enter your password",
+  "@enterPassword": {
+    "description": "Password field hint"
+  },
+  "loginError": "Login failed. Please check your credentials.",
+  "@loginError": {
+    "description": "Login error message"
+  },
+  "registered": "Registered",
+  "@registered": {
+    "description": "Registered packages stat label"
+  },
+  "pending": "Pending",
+  "@pending": {
+    "description": "Pending packages stat label"
+  },
+  "delivered": "Delivered",
+  "@delivered": {
+    "description": "Delivered packages stat label"
+  },
+  "registerPackage": "Register Package",
+  "@registerPackage": {
+    "description": "Register package button text"
+  },
+  "createNewDeliveryPackage": "Create a new delivery package",
+  "@createNewDeliveryPackage": {
+    "description": "Register package description"
+  },
+  "draftPackages": "Draft Packages",
+  "@draftPackages": {
+    "description": "Draft packages screen title"
+  },
+  "noDraftPackages": "No draft packages",
+  "@noDraftPackages": {
+    "description": "Empty draft list message"
+  },
+  "errorLoadingDrafts": "Error loading drafts",
+  "@errorLoadingDrafts": {
+    "description": "Error loading drafts message"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button text"
+  },
+  "packages": "package",
+  "packages_plural": "{count} packages",
+  "@packages": {
+    "description": "Package count text",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Today date label"
+  },
+  "yesterday": "Yesterday",
+  "@yesterday": {
+    "description": "Yesterday date label"
+  },
+  "trackPackages": "Track Packages",
+  "@trackPackages": {
+    "description": "Track packages screen title"
+  },
+  "noPackagesFound": "No packages found",
+  "@noPackagesFound": {
+    "description": "Empty packages list message"
+  },
+  "errorLoadingPackages": "Error loading packages",
+  "@errorLoadingPackages": {
+    "description": "Error loading packages message"
+  },
+  "trackLive": "Track Live",
+  "@trackLive": {
+    "description": "Track live button text"
+  },
+  "trackingAvailableWhenOnTheWay": "Tracking available when package is on the way",
+  "@trackingAvailableWhenOnTheWay": {
+    "description": "Track live button disabled message"
+  },
+  "customerName": "Customer Name",
+  "@customerName": {
+    "description": "Customer name field label"
+  },
+  "customerPhone": "Customer Phone",
+  "@customerPhone": {
+    "description": "Customer phone field label"
+  },
+  "deliveryAddress": "Delivery Address",
+  "@deliveryAddress": {
+    "description": "Delivery address field label"
+  },
+  "paymentType": "Payment Type",
+  "@paymentType": {
+    "description": "Payment type field label"
+  },
+  "amount": "Amount",
+  "@amount": {
+    "description": "Amount field label"
+  },
+  "packageDescription": "Package Description (Optional)",
+  "@packageDescription": {
+    "description": "Package description field label"
+  },
+  "takePackagePhoto": "Take Package Photo (Optional)",
+  "@takePackagePhoto": {
+    "description": "Take photo button text"
+  },
+  "addToList": "Add to List",
+  "@addToList": {
+    "description": "Add to list button text"
+  },
+  "submitAll": "Submit All",
+  "@submitAll": {
+    "description": "Submit all button text"
+  },
+  "packageList": "Package List",
+  "@packageList": {
+    "description": "Package list title"
+  },
+  "manageYourAccount": "Manage your account",
+  "@manageYourAccount": {
+    "description": "Profile screen subtitle"
+  },
+  "shopOwner": "Shop Owner",
+  "@shopOwner": {
+    "description": "Shop owner role label"
+  },
+  "edit": "Edit",
+  "@edit": {
+    "description": "Edit button text"
+  },
+  "total": "Total",
+  "@total": {
+    "description": "Total stat label"
+  },
+  "completed": "Completed",
+  "@completed": {
+    "description": "Completed stat label"
+  },
+  "shopInformation": "Shop Information",
+  "@shopInformation": {
+    "description": "Shop information card title"
+  },
+  "shopName": "Shop Name",
+  "@shopName": {
+    "description": "Shop name label"
+  },
+  "phoneNumber": "Phone Number",
+  "@phoneNumber": {
+    "description": "Phone number label"
+  },
+  "location": "Location",
+  "@location": {
+    "description": "Location label"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings menu item"
+  },
+  "notifications": "Notifications",
+  "@notifications": {
+    "description": "Notifications menu item"
+  },
+  "refresh": "Refresh",
+  "@refresh": {
+    "description": "Refresh button tooltip"
+  },
+  "errorLoadingProfile": "Error loading profile",
+  "@errorLoadingProfile": {
+    "description": "Error loading profile message"
+  },
+  "pleaseEnterCustomerName": "Please enter customer name",
+  "@pleaseEnterCustomerName": {
+    "description": "Customer name validation error"
+  },
+  "pleaseEnterPhoneNumber": "Please enter phone number",
+  "@pleaseEnterPhoneNumber": {
+    "description": "Phone number validation error"
+  },
+  "pleaseEnterDeliveryAddress": "Please enter delivery address",
+  "@pleaseEnterDeliveryAddress": {
+    "description": "Delivery address validation error"
+  },
+  "pleaseEnterValidAmount": "Please enter a valid amount",
+  "@pleaseEnterValidAmount": {
+    "description": "Amount validation error"
+  },
+  "prepaid": "Prepaid",
+  "@prepaid": {
+    "description": "Prepaid payment type"
+  },
+  "cod": "COD",
+  "@cod": {
+    "description": "COD payment type"
+  },
+  "packageSavedToDraft": "Package saved to draft",
+  "@packageSavedToDraft": {
+    "description": "Package saved to draft success message"
+  },
+  "failedToSavePackage": "Failed to save package to draft",
+  "@failedToSavePackage": {
+    "description": "Failed to save package error"
+  },
+  "pleaseAddAtLeastOnePackage": "Please add at least one package",
+  "@pleaseAddAtLeastOnePackage": {
+    "description": "Submit packages validation error"
+  },
+  "noValidDraftPackages": "No valid draft packages to submit",
+  "@noValidDraftPackages": {
+    "description": "No valid draft packages error"
+  },
+  "packagesSubmittedSuccessfully": "{count} package(s) submitted successfully",
+  "@packagesSubmittedSuccessfully": {
+    "description": "Packages submitted success message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "packagesFailed": "{count} package(s) failed",
+  "@packagesFailed": {
+    "description": "Packages failed message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errors": "Errors",
+  "@errors": {
+    "description": "Errors label"
+  },
+  "packageRemovedFromList": "Package removed from list",
+  "@packageRemovedFromList": {
+    "description": "Package removed success message"
+  },
+  "cameraPermissionRequired": "Camera permission is required to take photos. Please grant permission in settings.",
+  "@cameraPermissionRequired": {
+    "description": "Camera permission required message"
+  },
+  "errorTakingPhoto": "Error taking photo",
+  "@errorTakingPhoto": {
+    "description": "Error taking photo message"
+  },
+  "registeredDate": "Registered",
+  "@registeredDate": {
+    "description": "Registered date label"
+  },
+  "updated": "Updated",
+  "@updated": {
+    "description": "Updated date label"
+  },
+  "tracking": "Tracking",
+  "@tracking": {
+    "description": "Tracking code label"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button text"
+  },
+  "registerAllPackages": "Register All Packages",
+  "@registerAllPackages": {
+    "description": "Register all packages button text"
+  },
+  "noValidDraftPackagesFound": "No valid draft packages found",
+  "@noValidDraftPackagesFound": {
+    "description": "No valid draft packages found error"
+  },
+  "draftPackageUpdated": "Draft package updated successfully",
+  "@draftPackageUpdated": {
+    "description": "Draft package updated success message"
+  },
+  "draftPackageDeleted": "Draft package deleted successfully",
+  "@draftPackageDeleted": {
+    "description": "Draft package deleted success message"
+  },
+  "editDraft": "Edit Draft",
+  "@editDraft": {
+    "description": "Edit draft screen title"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save button text"
+  },
+  "removeImage": "Remove Image",
+  "@removeImage": {
+    "description": "Remove image button text"
+  },
+  "packagesRegisteredDate": "Packages",
+  "@packagesRegisteredDate": {
+    "description": "Packages by registered date title"
+  },
+  "noRegisteredPackagesFound": "No registered packages found",
+  "@noRegisteredPackagesFound": {
+    "description": "No registered packages found message"
+  },
+  "packageImagePreview": "Package Image Preview",
+  "@packageImagePreview": {
+    "description": "Package image preview title"
+  },
+  "failedToLoadImage": "Failed to load image",
+  "@failedToLoadImage": {
+    "description": "Failed to load image error"
+  },
+  "extractCustomerInfo": "Extract Customer Info",
+  "@extractCustomerInfo": {
+    "description": "Extract customer info button text"
+  },
+  "enterCustomerInfo": "Enter customer information (name, phone, address)...",
+  "@enterCustomerInfo": {
+    "description": "AI extraction input hint"
+  },
+  "extractedCustomerInfo": "Extracted Customer Info (Review & Edit)",
+  "@extractedCustomerInfo": {
+    "description": "Extracted customer info preview title"
+  },
+  "confirmFillForm": "Confirm & Fill Form",
+  "@confirmFillForm": {
+    "description": "Confirm and fill form button text"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button text"
+  },
+  "extracting": "Extracting...",
+  "@extracting": {
+    "description": "Extracting loading message"
+  },
+  "editProfileFeatureComingSoon": "Edit profile feature coming soon",
+  "@editProfileFeatureComingSoon": {
+    "description": "Edit profile coming soon message"
+  },
+  "settingsFeatureComingSoon": "Settings feature coming soon",
+  "@settingsFeatureComingSoon": {
+    "description": "Settings coming soon message"
+  },
+  "notificationsFeatureComingSoon": "Notifications feature coming soon",
+  "@notificationsFeatureComingSoon": {
+    "description": "Notifications coming soon message"
+  },
+  "submissionResult": "Submission Result",
+  "@submissionResult": {
+    "description": "Submission result dialog title"
+  },
+  "ok": "OK",
+  "@ok": {
+    "description": "OK button text"
+  },
+  "pleaseEnterYourEmail": "Please enter your email",
+  "@pleaseEnterYourEmail": {
+    "description": "Email validation error"
+  },
+  "pleaseEnterValidEmail": "Please enter a valid email",
+  "@pleaseEnterValidEmail": {
+    "description": "Valid email validation error"
+  },
+  "pleaseEnterYourPassword": "Please enter your password",
+  "@pleaseEnterYourPassword": {
+    "description": "Password validation error"
+  },
+  "passwordMustBeAtLeast6Characters": "Password must be at least 6 characters",
+  "@passwordMustBeAtLeast6Characters": {
+    "description": "Password length validation error"
+  },
+  "contactSupportHelp": "Contact support if you need help accessing your account",
+  "@contactSupportHelp": {
+    "description": "Contact support help text"
+  },
+  "okDelivery": "OK Delivery",
+  "@okDelivery": {
+    "description": "App name"
+  },
+  "merchantPortal": "Merchant Portal",
+  "@merchantPortal": {
+    "description": "Merchant portal subtitle"
+  },
+  "packageSavedToDraftCount": "Package saved to draft ({count} total)",
+  "@packageSavedToDraftCount": {
+    "description": "Package saved to draft with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Language setting label"
+  },
+  "systemDefault": "System Default",
+  "@systemDefault": {
+    "description": "System default language option"
+  },
+  "languageChangedRestart": "Language changed. Please restart the app to apply changes.",
+  "@languageChangedRestart": {
+    "description": "Language changed message"
+  },
+  "languageChanged": "Language changed successfully",
+  "@languageChanged": {
+    "description": "Language changed success message"
+  }
+}
+

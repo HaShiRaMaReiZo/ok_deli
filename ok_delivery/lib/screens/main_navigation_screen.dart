@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../core/theme/app_theme.dart';
 import '../models/user_model.dart';
 import 'home/home_screen.dart';
@@ -8,8 +9,13 @@ import 'profile/profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final UserModel user;
+  final Future<void> Function(String)? onLanguageChanged;
 
-  const MainNavigationScreen({super.key, required this.user});
+  const MainNavigationScreen({
+    super.key,
+    required this.user,
+    this.onLanguageChanged,
+  });
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -27,7 +33,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       HomeScreen(user: widget.user),
       const DraftScreen(),
       const TrackScreen(),
-      const ProfileScreen(),
+      ProfileScreen(
+        user: widget.user,
+        onLanguageChanged: widget.onLanguageChanged,
+      ),
     ];
   }
 
@@ -48,26 +57,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         backgroundColor: Colors.white,
         selectedFontSize: 12,
         unselectedFontSize: 12,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            activeIcon: const Icon(Icons.home),
+            label: AppLocalizations.of(context)!.home,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.drafts_outlined),
-            activeIcon: Icon(Icons.drafts),
-            label: 'Draft',
+            icon: const Icon(Icons.drafts_outlined),
+            activeIcon: const Icon(Icons.drafts),
+            label: AppLocalizations.of(context)!.draft,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.track_changes_outlined),
-            activeIcon: Icon(Icons.track_changes),
-            label: 'Track',
+            icon: const Icon(Icons.track_changes_outlined),
+            activeIcon: const Icon(Icons.track_changes),
+            label: AppLocalizations.of(context)!.track,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
+            icon: const Icon(Icons.person_outline),
+            activeIcon: const Icon(Icons.person),
+            label: AppLocalizations.of(context)!.profile,
           ),
         ],
       ),

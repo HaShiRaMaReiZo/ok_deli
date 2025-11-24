@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/package_model.dart';
 import '../../repositories/package_repository.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
+import '../../core/utils/date_utils.dart' as myanmar_date;
 import 'draft_date_detail_screen.dart';
 
 class DraftScreen extends StatefulWidget {
@@ -62,11 +64,8 @@ class _DraftScreenState extends State<DraftScreen> {
     final Map<DateTime, List<PackageModel>> grouped = {};
 
     for (final draft in _drafts) {
-      final date = DateTime(
-        draft.createdAt.year,
-        draft.createdAt.month,
-        draft.createdAt.day,
-      );
+      // Use Myanmar timezone for grouping
+      final date = myanmar_date.MyanmarDateUtils.getDateKey(draft.createdAt);
 
       if (!grouped.containsKey(date)) {
         grouped[date] = [];
@@ -78,15 +77,16 @@ class _DraftScreenState extends State<DraftScreen> {
   }
 
   String _formatDate(DateTime date) {
-    final now = DateTime.now();
+    // date is already in Myanmar timezone from getDateKey
+    final now = myanmar_date.MyanmarDateUtils.getMyanmarNow();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final dateOnly = DateTime(date.year, date.month, date.day);
 
     if (dateOnly == today) {
-      return 'Today';
+      return AppLocalizations.of(context)!.today;
     } else if (dateOnly == yesterday) {
-      return 'Yesterday';
+      return AppLocalizations.of(context)!.yesterday;
     } else {
       final months = [
         'Jan',
@@ -111,13 +111,13 @@ class _DraftScreenState extends State<DraftScreen> {
     return Scaffold(
       backgroundColor: AppTheme.lightBeige,
       appBar: AppBar(
-        title: const Text('Draft Packages'),
+        title: Text(AppLocalizations.of(context)!.draftPackages),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadDrafts,
-            tooltip: 'Refresh',
+            tooltip: AppLocalizations.of(context)!.refresh,
           ),
         ],
       ),
@@ -129,22 +129,22 @@ class _DraftScreenState extends State<DraftScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Error loading drafts',
+                    AppLocalizations.of(context)!.errorLoadingDrafts,
                     style: TextStyle(color: Colors.red),
                   ),
                   const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: _loadDrafts,
-                    child: const Text('Retry'),
+                    child: Text(AppLocalizations.of(context)!.retry),
                   ),
                 ],
               ),
             )
           : _drafts.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
-                'No draft packages',
-                style: TextStyle(fontSize: 18, color: Colors.grey),
+                AppLocalizations.of(context)!.noDraftPackages,
+                style: const TextStyle(fontSize: 18, color: Colors.grey),
               ),
             )
           : RefreshIndicator(
@@ -198,13 +198,15 @@ class _DraftScreenState extends State<DraftScreen> {
                                       width: 50,
                                       height: 50,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Container(
-                                        color: AppTheme.primaryBlue,
-                                        child: const Icon(
-                                          Icons.calendar_today,
-                                          color: Colors.white,
-                                        ),
-                                      ),
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Container(
+                                                color: AppTheme.primaryBlue,
+                                                child: const Icon(
+                                                  Icons.calendar_today,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
                                     ),
                                   ),
                                 ),

@@ -13,8 +13,6 @@ class PackageModel {
   final String customerName;
   @JsonKey(name: 'customer_phone')
   final String customerPhone;
-  @JsonKey(name: 'customer_email')
-  final String? customerEmail;
   @JsonKey(name: 'delivery_address')
   final String deliveryAddress;
   @JsonKey(name: 'delivery_latitude')
@@ -23,16 +21,39 @@ class PackageModel {
   final double? deliveryLongitude;
   @JsonKey(name: 'payment_type')
   final String paymentType; // 'cod' or 'prepaid'
+  @JsonKey(fromJson: _amountFromJson)
   final double amount;
   @JsonKey(name: 'package_image')
   final String? packageImage;
   @JsonKey(name: 'package_description')
   final String? packageDescription;
   final String? status; // Nullable for drafts
-  @JsonKey(name: 'created_at')
+  @JsonKey(name: 'registered_at', fromJson: _dateTimeFromJsonNullable)
+  final DateTime? registeredAt; // Nullable - only set when package is registered
+  @JsonKey(name: 'created_at', fromJson: _dateTimeFromJson)
   final DateTime createdAt;
-  @JsonKey(name: 'updated_at')
+  @JsonKey(name: 'updated_at', fromJson: _dateTimeFromJson)
   final DateTime updatedAt;
+
+  static DateTime _dateTimeFromJson(String dateString) {
+    return DateTime.parse(dateString).toUtc();
+  }
+
+  static DateTime? _dateTimeFromJsonNullable(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return null;
+    }
+    return DateTime.parse(dateString).toUtc();
+  }
+
+  static double _amountFromJson(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
 
   PackageModel({
     required this.id,
@@ -40,7 +61,6 @@ class PackageModel {
     required this.merchantId,
     required this.customerName,
     required this.customerPhone,
-    this.customerEmail,
     required this.deliveryAddress,
     this.deliveryLatitude,
     this.deliveryLongitude,
@@ -49,6 +69,7 @@ class PackageModel {
     this.packageImage,
     this.packageDescription,
     this.status, // Nullable for drafts
+    this.registeredAt, // Nullable - only set when package is registered
     required this.createdAt,
     required this.updatedAt,
   });
@@ -62,7 +83,6 @@ class PackageModel {
 class CreatePackageModel {
   final String customerName;
   final String customerPhone;
-  final String? customerEmail;
   final String deliveryAddress;
   final double? deliveryLatitude;
   final double? deliveryLongitude;
@@ -74,7 +94,6 @@ class CreatePackageModel {
   CreatePackageModel({
     required this.customerName,
     required this.customerPhone,
-    this.customerEmail,
     required this.deliveryAddress,
     this.deliveryLatitude,
     this.deliveryLongitude,
@@ -87,8 +106,6 @@ class CreatePackageModel {
   Map<String, dynamic> toJson() => {
     'customer_name': customerName,
     'customer_phone': customerPhone,
-    if (customerEmail != null && customerEmail!.isNotEmpty)
-      'customer_email': customerEmail,
     'delivery_address': deliveryAddress,
     if (deliveryLatitude != null) 'delivery_latitude': deliveryLatitude,
     if (deliveryLongitude != null) 'delivery_longitude': deliveryLongitude,

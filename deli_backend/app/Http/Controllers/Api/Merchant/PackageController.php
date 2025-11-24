@@ -44,16 +44,8 @@ class PackageController extends Controller
             }
             
             // Normalize empty strings to null for optional fields
-            // Also handle invalid email formats (if it doesn't contain @, treat as null)
             $packages = $request->packages;
             foreach ($packages as &$package) {
-                // Handle customer_email - if empty or doesn't look like an email, set to null
-                if (isset($package['customer_email'])) {
-                    $email = trim($package['customer_email']);
-                    if (empty($email) || strpos($email, '@') === false) {
-                        $package['customer_email'] = null;
-                    }
-                }
                 // Handle package_description - if empty, set to null
                 if (isset($package['package_description']) && empty(trim($package['package_description']))) {
                     $package['package_description'] = null;
@@ -65,7 +57,6 @@ class PackageController extends Controller
                 'packages' => 'required|array|min:1|max:50', // Limit to 50 packages per request
                 'packages.*.customer_name' => 'required|string|max:255',
                 'packages.*.customer_phone' => 'required|string|max:20',
-                'packages.*.customer_email' => 'nullable|email',
                 'packages.*.delivery_address' => 'required|string',
                 'packages.*.delivery_latitude' => 'nullable|numeric',
                 'packages.*.delivery_longitude' => 'nullable|numeric',
@@ -181,12 +172,14 @@ class PackageController extends Controller
                         }
                     }
 
+                    // Get current time in Myanmar timezone (UTC+6:30)
+                    $myanmarTime = now()->setTimezone('Asia/Yangon');
+                    
                     $package = Package::create([
                         'tracking_code' => $trackingCode,
                         'merchant_id' => $merchant->id,
                         'customer_name' => $packageData['customer_name'],
                         'customer_phone' => $packageData['customer_phone'],
-                        'customer_email' => $packageData['customer_email'] ?? null,
                         'delivery_address' => $packageData['delivery_address'],
                         'delivery_latitude' => $packageData['delivery_latitude'] ?? null,
                         'delivery_longitude' => $packageData['delivery_longitude'] ?? null,
@@ -195,6 +188,7 @@ class PackageController extends Controller
                         'package_image' => $packageImageUrl,
                         'package_description' => $packageData['package_description'] ?? null,
                         'status' => 'registered',
+                        'registered_at' => $myanmarTime,
                     ]);
 
                     // Log status history
@@ -410,12 +404,6 @@ class PackageController extends Controller
                 ], 422, ['Content-Type' => 'application/json']);
             }
             foreach ($packages as &$package) {
-                if (isset($package['customer_email'])) {
-                    $email = trim($package['customer_email']);
-                    if (empty($email) || strpos($email, '@') === false) {
-                        $package['customer_email'] = null;
-                    }
-                }
                 if (isset($package['package_description']) && empty(trim($package['package_description']))) {
                     $package['package_description'] = null;
                 }
@@ -426,7 +414,6 @@ class PackageController extends Controller
                 'packages' => 'required|array|min:1|max:50',
                 'packages.*.customer_name' => 'required|string|max:255',
                 'packages.*.customer_phone' => 'required|string|max:20',
-                'packages.*.customer_email' => 'nullable|email',
                 'packages.*.delivery_address' => 'required|string',
                 'packages.*.delivery_latitude' => 'nullable|numeric',
                 'packages.*.delivery_longitude' => 'nullable|numeric',
@@ -495,7 +482,6 @@ class PackageController extends Controller
                         'merchant_id' => $merchant->id,
                         'customer_name' => $packageData['customer_name'],
                         'customer_phone' => $packageData['customer_phone'],
-                        'customer_email' => $packageData['customer_email'] ?? null,
                         'delivery_address' => $packageData['delivery_address'],
                         'delivery_latitude' => $packageData['delivery_latitude'] ?? null,
                         'delivery_longitude' => $packageData['delivery_longitude'] ?? null,
@@ -558,7 +544,6 @@ class PackageController extends Controller
                         'merchant_id' => (int) $packageArray['merchant_id'],
                         'customer_name' => (string) $packageArray['customer_name'],
                         'customer_phone' => (string) $packageArray['customer_phone'],
-                        'customer_email' => $packageArray['customer_email'] ?? null,
                         'delivery_address' => (string) $packageArray['delivery_address'],
                         'delivery_latitude' => isset($packageArray['delivery_latitude']) ? (float) $packageArray['delivery_latitude'] : null,
                         'delivery_longitude' => isset($packageArray['delivery_longitude']) ? (float) $packageArray['delivery_longitude'] : null,
@@ -569,8 +554,9 @@ class PackageController extends Controller
                         'tracking_code' => $packageArray['tracking_code'] ?? null,
                         'status' => $packageArray['status'] ?? null, // May be null for drafts
                         'is_draft' => isset($packageArray['is_draft']) ? (bool) $packageArray['is_draft'] : false,
-                        'created_at' => $packageArray['created_at'] ?? now()->toDateTimeString(),
-                        'updated_at' => $packageArray['updated_at'] ?? now()->toDateTimeString(),
+                        'registered_at' => $pkg->registered_at ? $pkg->registered_at->toIso8601String() : null,
+                        'created_at' => $pkg->created_at->toIso8601String(),
+                        'updated_at' => $pkg->updated_at->toIso8601String(),
                     ];
                 } catch (\Exception $serializeEx) {
                     Log::warning('Error serializing package', [
@@ -717,7 +703,6 @@ class PackageController extends Controller
                         'merchant_id' => (int) $packageArray['merchant_id'],
                         'customer_name' => (string) $packageArray['customer_name'],
                         'customer_phone' => (string) $packageArray['customer_phone'],
-                        'customer_email' => $packageArray['customer_email'] ?? null,
                         'delivery_address' => (string) $packageArray['delivery_address'],
                         'delivery_latitude' => isset($packageArray['delivery_latitude']) ? (float) $packageArray['delivery_latitude'] : null,
                         'delivery_longitude' => isset($packageArray['delivery_longitude']) ? (float) $packageArray['delivery_longitude'] : null,
@@ -728,8 +713,9 @@ class PackageController extends Controller
                         'tracking_code' => $packageArray['tracking_code'] ?? null,
                         'status' => $packageArray['status'] ?? null,
                         'is_draft' => isset($packageArray['is_draft']) ? (bool) $packageArray['is_draft'] : false,
-                        'created_at' => $packageArray['created_at'] ?? now()->toDateTimeString(),
-                        'updated_at' => $packageArray['updated_at'] ?? now()->toDateTimeString(),
+                        'registered_at' => $pkg->registered_at ? $pkg->registered_at->toIso8601String() : null,
+                        'created_at' => $pkg->created_at->toIso8601String(),
+                        'updated_at' => $pkg->updated_at->toIso8601String(),
                     ];
                 } catch (\Exception $e) {
                     Log::warning('Error serializing draft package', [
@@ -797,11 +783,15 @@ class PackageController extends Controller
                     // Generate tracking code
                     $trackingCode = TrackingCodeService::generate();
 
-                    // Update package: set tracking code, status, and is_draft = false
+                    // Get current time in Myanmar timezone (UTC+6:30)
+                    $myanmarTime = now()->setTimezone('Asia/Yangon');
+                    
+                    // Update package: set tracking code, status, is_draft = false, and registered_at
                     $package->update([
                         'tracking_code' => $trackingCode,
                         'status' => 'registered',
                         'is_draft' => false,
+                        'registered_at' => $myanmarTime,
                     ]);
 
                     // Create initial status history entry
@@ -910,6 +900,156 @@ class PackageController extends Controller
             
             return response()->json([
                 'message' => 'An error occurred while deleting the draft',
+                'error' => $e->getMessage(),
+            ], 500, [
+                'Content-Type' => 'application/json',
+            ]);
+        }
+    }
+
+    /**
+     * Update a draft package
+     */
+    public function updateDraft(Request $request, $id)
+    {
+        try {
+            $merchant = $request->user()->merchant;
+            
+            $package = Package::where('merchant_id', $merchant->id)
+                ->where('is_draft', true)
+                ->findOrFail($id);
+            
+            $validated = $request->validate([
+                'customer_name' => 'required|string|max:255',
+                'customer_phone' => 'required|string|max:20',
+                'delivery_address' => 'required|string|max:500',
+                'payment_type' => 'required|in:cod,prepaid',
+                'amount' => 'required|numeric|min:0',
+                'package_image' => 'nullable|string',
+                'package_description' => 'nullable|string|max:1000',
+            ]);
+            
+            // Handle image upload/update/delete
+            if (isset($validated['package_image'])) {
+                if (empty($validated['package_image'])) {
+                    // Empty string means delete image
+                    if ($package->package_image) {
+                        try {
+                            $supabaseService = new SupabaseStorageService();
+                            $oldPath = $supabaseService->extractPathFromUrl($package->package_image);
+                            if ($oldPath) {
+                                $supabaseService->delete($oldPath);
+                            }
+                        } catch (\Exception $e) {
+                            Log::warning('Failed to delete old draft package image', [
+                                'package_id' => $package->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                    $validated['package_image'] = null;
+                } else {
+                    // New image provided - upload it
+                    try {
+                        $supabaseService = new SupabaseStorageService();
+                        
+                        // Delete old image if exists
+                        if ($package->package_image) {
+                            try {
+                                $oldPath = $supabaseService->extractPathFromUrl($package->package_image);
+                                if ($oldPath) {
+                                    $supabaseService->delete($oldPath);
+                                }
+                            } catch (\Exception $e) {
+                                // Log but continue
+                                Log::warning('Failed to delete old draft package image', [
+                                    'package_id' => $package->id,
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
+                        }
+                        
+                        // Upload new image
+                        $imageData = base64_decode($validated['package_image']);
+                        $fileName = 'draft_' . $package->id . '_' . uniqid() . '_' . time() . '.jpg';
+                        $path = 'package_images/' . $fileName;
+                        
+                        $supabaseService->upload($path, $imageData, 'Failed to upload package image');
+                        $validated['package_image'] = $supabaseService->getPublicUrl($path);
+                    } catch (\Exception $e) {
+                        Log::error('Error uploading package image', [
+                            'package_id' => $package->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                        
+                        return response()->json([
+                            'message' => 'Failed to upload package image',
+                            'error' => $e->getMessage(),
+                        ], 500, [
+                            'Content-Type' => 'application/json',
+                        ]);
+                    }
+                }
+            } else {
+                // Keep existing image if no new image provided
+                unset($validated['package_image']);
+            }
+            
+            // Update package
+            $package->update($validated);
+            
+            // Reload to get updated data
+            $package->refresh();
+            
+            // Manually serialize to handle nullable status
+            $packageData = [
+                'id' => $package->id,
+                'merchant_id' => $package->merchant_id,
+                'customer_name' => $package->customer_name,
+                'customer_phone' => $package->customer_phone,
+                'delivery_address' => $package->delivery_address,
+                'delivery_latitude' => $package->delivery_latitude,
+                'delivery_longitude' => $package->delivery_longitude,
+                'payment_type' => $package->payment_type,
+                'amount' => (float) $package->amount,
+                'package_image' => $package->package_image,
+                'package_description' => $package->package_description,
+                'tracking_code' => $package->tracking_code,
+                'status' => $package->status,
+                'is_draft' => $package->is_draft,
+                'registered_at' => $package->registered_at ? $package->registered_at->toIso8601String() : null,
+                'created_at' => $package->created_at->toIso8601String(),
+                'updated_at' => $package->updated_at->toIso8601String(),
+            ];
+            
+            return response()->json([
+                'message' => 'Draft package updated successfully',
+                'package' => $packageData,
+            ], 200, [
+                'Content-Type' => 'application/json',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422, [
+                'Content-Type' => 'application/json',
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Draft package not found',
+                'error' => 'The specified draft package does not exist or does not belong to you.',
+            ], 404, [
+                'Content-Type' => 'application/json',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error updating draft package', [
+                'package_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json([
+                'message' => 'An error occurred while updating the draft',
                 'error' => $e->getMessage(),
             ], 500, [
                 'Content-Type' => 'application/json',

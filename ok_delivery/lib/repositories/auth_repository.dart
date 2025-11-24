@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
@@ -27,10 +28,24 @@ class AuthRepository {
       // Store token
       try {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(AppConstants.tokenKey, authResponse.token);
+        final saved = await prefs.setString(
+          AppConstants.tokenKey,
+          authResponse.token,
+        );
+        if (kDebugMode) {
+          print('AuthRepository: Token saved successfully: $saved');
+          // Verify token was saved
+          final verifyToken = prefs.getString(AppConstants.tokenKey);
+          print(
+            'AuthRepository: Token verification: ${verifyToken != null ? "Saved" : "NOT SAVED"}',
+          );
+        }
       } catch (e) {
-        // Continue even if token storage fails - the login was successful
-        // PrettyDioLogger will show the error if needed
+        if (kDebugMode) {
+          print('AuthRepository: ERROR saving token: $e');
+        }
+        // Re-throw error - token storage is critical
+        throw Exception('Failed to save authentication token: $e');
       }
 
       return authResponse;
@@ -91,12 +106,37 @@ class AuthRepository {
   }
 
   Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(AppConstants.tokenKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.tokenKey);
+      if (kDebugMode) {
+        print(
+          'AuthRepository: Token retrieved: ${token != null ? "Found (${token.length} chars)" : "NOT FOUND"}',
+        );
+      }
+      return token;
+    } catch (e) {
+      if (kDebugMode) {
+        print('AuthRepository: ERROR getting token: $e');
+      }
+      return null;
+    }
   }
 
   Future<bool> isAuthenticated() async {
     final token = await getToken();
-    return token != null && token.isNotEmpty;
+    if (token == null || token.isEmpty) {
+      return false;
+    }
+
+    // Verify token is still valid by calling /api/auth/user
+    try {
+      final user = await getCurrentUser();
+      return user != null && user.role == 'merchant';
+    } catch (e) {
+      // Token is invalid or expired, clear it
+      await logout();
+      return false;
+    }
   }
 }

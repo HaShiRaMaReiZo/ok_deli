@@ -8,6 +8,7 @@ import '../../models/package_model.dart';
 import '../../repositories/package_repository.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
+import '../../widgets/image_preview_screen.dart';
 
 // Helper class to store package with its image and draft ID
 class PackageWithImage {
@@ -34,7 +35,6 @@ class _RegisterPackageScreenState extends State<RegisterPackageScreen> {
   // Current package form fields
   final _customerNameController = TextEditingController();
   final _customerPhoneController = TextEditingController();
-  final _customerEmailController = TextEditingController();
   final _deliveryAddressController = TextEditingController();
   final _amountController = TextEditingController();
   final _packageDescriptionController = TextEditingController();
@@ -48,7 +48,6 @@ class _RegisterPackageScreenState extends State<RegisterPackageScreen> {
   void dispose() {
     _customerNameController.dispose();
     _customerPhoneController.dispose();
-    _customerEmailController.dispose();
     _deliveryAddressController.dispose();
     _amountController.dispose();
     _packageDescriptionController.dispose();
@@ -111,7 +110,6 @@ class _RegisterPackageScreenState extends State<RegisterPackageScreen> {
   void _clearForm() {
     _customerNameController.clear();
     _customerPhoneController.clear();
-    _customerEmailController.clear();
     _deliveryAddressController.clear();
     _amountController.clear();
     _packageDescriptionController.clear();
@@ -146,13 +144,11 @@ class _RegisterPackageScreenState extends State<RegisterPackageScreen> {
       });
 
       try {
-        final email = _customerEmailController.text.trim();
         final base64Image = await _encodeImageToBase64(_selectedImage);
 
         final package = CreatePackageModel(
           customerName: _customerNameController.text.trim(),
           customerPhone: _customerPhoneController.text.trim(),
-          customerEmail: email.isEmpty ? null : email,
           deliveryAddress: _deliveryAddressController.text.trim(),
           paymentType: _paymentType,
           amount: amount,
@@ -452,26 +448,6 @@ class _RegisterPackageScreenState extends State<RegisterPackageScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Customer Email (Optional)
-                  TextFormField(
-                    controller: _customerEmailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Customer Email (Optional)',
-                      hintText: 'Enter email address',
-                      prefixIcon: Icon(Icons.email),
-                    ),
-                    validator: (value) {
-                      if (value != null &&
-                          value.isNotEmpty &&
-                          !value.contains('@')) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
                   // Delivery Address
                   TextFormField(
                     controller: _deliveryAddressController,
@@ -554,13 +530,22 @@ class _RegisterPackageScreenState extends State<RegisterPackageScreen> {
                       margin: const EdgeInsets.only(bottom: 16),
                       child: Stack(
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              _selectedImage!,
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
+                          GestureDetector(
+                            onTap: () {
+                              ImagePreviewScreen.showFile(
+                                context,
+                                _selectedImage!,
+                                title: 'Package Image Preview',
+                              );
+                            },
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                _selectedImage!,
+                                height: 200,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                           Positioned(
